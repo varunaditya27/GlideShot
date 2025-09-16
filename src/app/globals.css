@@ -112,6 +112,7 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -119,4 +120,31 @@
   body {
     @apply bg-background text-foreground;
   }
+  .font-montserrat {
+    font-family: var(--font-montserrat), 'Montserrat', Arial, sans-serif;
+  }
+}
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-32px); }
+}
+.animate-bounce-slow {
+  animation: bounce-slow 2.2s cubic-bezier(0.4,0,0.2,1) infinite;
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+.animate-wiggle {
+  animation: wiggle 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 3.5s cubic-bezier(0.4,0,0.2,1) infinite;
 }

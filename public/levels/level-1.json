@@ -1,0 +1,9 @@
+{
+  "name": "Classic Starter",
+  "description": "Straight fairway with a single hole.",
+  "model": "",
+  "start": [0, 0.2, 10],
+  "hole": [0, 0.01, -10],
+  "par": 3,
+  "obstacles": []
+}

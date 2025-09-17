@@ -1,0 +1,9 @@
+{
+  "name": "Modern Maze",
+  "description": "Simple zig-zag path.",
+  "model": "",
+  "start": [0, 0.2, 10],
+  "hole": [-2, 0.01, -8],
+  "par": 4,
+  "obstacles": []
+}

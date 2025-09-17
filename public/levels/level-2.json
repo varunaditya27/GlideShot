@@ -1,0 +1,9 @@
+{
+  "name": "Gentle Challenge",
+  "description": "Slightly narrower course with corner bounces.",
+  "model": "",
+  "start": [0, 0.2, 10],
+  "hole": [2, 0.01, -9],
+  "par": 3,
+  "obstacles": []
+}

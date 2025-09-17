@@ -20,14 +20,27 @@ export default function Home() {
     }
   }, []);
 
-  // Animated star/particle background
-  const particles = Array.from({ length: 36 }).map(() => ({
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    size: Math.random() * 2 + 1,
-    delay: Math.random() * 3,
-    opacity: Math.random() * 0.5 + 0.3,
-  }));
+  // Animated star/particle background (deterministic across SSR/Client)
+  function mulberry32(seed: number) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  const particles = React.useMemo(() => {
+    const rand = mulberry32(0xDEADBEEF);
+    return Array.from({ length: 36 }).map(() => ({
+      left: `${rand() * 100}%`,
+      top: `${rand() * 100}%`,
+      size: rand() * 2 + 1,
+      delay: rand() * 3,
+      opacity: rand() * 0.5 + 0.3,
+    }));
+  }, []);
 
   return (
   <main className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[oklch(0.13_0.08_260)] via-[oklch(0.18_0.14_320)] to-[oklch(0.269_0_0)] transition-colors duration-700 overflow-hidden px-4 md:px-0">
@@ -189,7 +202,7 @@ export default function Home() {
             transition={{ delay: 2.9, duration: 0.8 }}
             className="text-base text-white/80 text-center font-montserrat"
           >
-            &copy; {new Date().getFullYear()} <span className="font-bold text-primary">GlideShot</span>. All rights reserved.<br />
+            &copy; {(() => { try { return new Date(2025, 0, 1).getFullYear(); } catch { return 2025; } })()} <span className="font-bold text-primary">GlideShot</span>. All rights reserved.<br />
             <span className="text-xs text-white/40">Crafted with Next.js, React Three Fiber, and a passion for play.</span>
           </motion.div>
         </div>

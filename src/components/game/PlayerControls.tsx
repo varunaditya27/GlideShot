@@ -72,6 +72,42 @@ export default function PlayerControls({ ballPosition, onShoot, onAimStart, onAi
   const end = new THREE.Vector3(start.x + arrowVector.x, start.y + arrowVector.y, start.z + arrowVector.z);
   const coneYaw = Math.atan2(-aim.direction.x, -aim.direction.z);
 
+  // Power-based color (green -> yellow -> red)
+  const powerNorm = Math.min(aim.power, 5) / 5; // 0..1
+  const hue = 120 - 120 * powerNorm; // 120 (green) to 0 (red)
+  const hslToHex = (h: number, s: number, l: number) => {
+    s /= 100; l /= 100;
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+    else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+    else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+    else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+    else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+    else { r = c; g = 0; b = x; }
+    const toHex = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+  const powerColor = hslToHex(hue, 90, 55);
+
+  // Dotted trajectory preview (cheap): a few flat discs along the aim direction
+  const dotCount = 8;
+  const dotSpacing = 0.7; // world units between dots
+  const dots: THREE.Vector3[] = [];
+  if (isDragging) {
+    for (let i = 1; i <= dotCount; i++) {
+      const dist = i * dotSpacing * (0.6 + powerNorm * 0.8); // extend with power
+      const p = new THREE.Vector3(
+        start.x + aim.direction.x * dist,
+        0.02,
+        start.z + aim.direction.z * dist
+      );
+      dots.push(p);
+    }
+  }
+
   return (
     <group>
       <mesh
@@ -88,22 +124,30 @@ export default function PlayerControls({ ballPosition, onShoot, onAimStart, onAi
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      {/* Aiming line */}
-      {isDragging && <Line points={[start, end]} color={0xffff00 as unknown as string} lineWidth={2} />}
+  {/* Aiming line */}
+  {isDragging && <Line points={[start, end]} color={powerColor} lineWidth={2} />}
       {/* Aiming ring at the ball */}
       {isDragging && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[ballPosition[0], 0.02, ballPosition[2]]}>
           <ringGeometry args={[0.22, 0.25 + Math.min(aim.power, 5) * 0.05, 32]} />
-          <meshBasicMaterial color="#ffcc00" transparent opacity={0.8} />
+          <meshBasicMaterial color={powerColor} transparent opacity={0.9} />
         </mesh>
       )}
       {/* Arrowhead cone */}
       {isDragging && (
         <mesh position={end} rotation={[0, coneYaw, 0]}>
           <coneGeometry args={[0.2, 0.5, 12]} />
-          <meshStandardMaterial color={0xffcc00} />
+          <meshStandardMaterial color={powerColor} />
         </mesh>
       )}
+
+      {/* Dotted trajectory */}
+      {isDragging && dots.map((p, idx) => (
+        <mesh key={idx} position={[p.x, p.y, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.06 + idx * 0.004, 12]} />
+          <meshBasicMaterial color={powerColor} transparent opacity={0.85 - idx * 0.08} />
+        </mesh>
+      ))}
     </group>
   );
 }

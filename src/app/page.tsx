@@ -5,7 +5,11 @@
 import React from "react";
 
 import { motion } from "framer-motion";
-import Link from "next/link";
+// import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { auth } from "@/lib/firebaseConfig";
+import { GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { LayoutDashboard, Sparkles, MoonStar } from "lucide-react";
 
 const headingFont = {
@@ -13,6 +17,8 @@ const headingFont = {
 };
 
 export default function Home() {
+  const router = useRouter();
+  const { user } = useAuth();
   // Force dark mode for immersive experience
   React.useEffect(() => {
     if (typeof window !== "undefined") {
@@ -122,13 +128,33 @@ export default function Home() {
         whileTap={{ scale: 0.97 }}
         className="z-20 mb-16"
       >
-        <Link
-          href="/game"
+        <button
+          onClick={async () => {
+            if (user) {
+              router.push('/game');
+              return;
+            }
+            try {
+              await setPersistence(auth, browserLocalPersistence);
+              const provider = new GoogleAuthProvider();
+              await signInWithPopup(auth, provider);
+              router.push('/game');
+            } catch (e) {
+              console.error('Google sign-in failed', e);
+            }
+          }}
           className="px-12 py-5 rounded-full bg-gradient-to-r from-[oklch(0.398_0.07_227.392)] via-[oklch(0.828_0.189_84.429)] to-[oklch(0.769_0.188_70.08)] text-white text-xl font-extrabold shadow-2xl hover:shadow-[0_0_64px_oklch(0.398_0.07_227.392_0.7)] transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-primary/60 border-2 border-white/10 backdrop-blur-md font-montserrat tracking-wide animate-glow"
         >
-          Play Now
-        </Link>
+          {user ? 'Play Now' : 'Continue with Google'}
+        </button>
       </motion.div>
+
+      {/* Optional: small text link to play as guest or go directly if already signed-in */}
+      {!user && (
+        <div className="z-20 -mt-10 mb-10 text-white/70 text-sm">
+          Already have an account? <button className="underline hover:text-white/100" onClick={() => router.push('/game')}>Try demo</button>
+        </div>
+      )}
 
       {/* Features Section - Staggered, richer text, Lucide icons, improved spacing */}
       <motion.section
@@ -179,6 +205,11 @@ export default function Home() {
           transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
         />
         <div className="relative flex flex-col items-center justify-center gap-4 py-12">
+          {user && (
+            <div className="absolute right-4 top-2 text-white/80 text-sm">
+              Signed in • <button className="underline hover:text-white" onClick={async () => { try { await auth.signOut(); } catch (e) { console.error(e); } }}>Sign out</button>
+            </div>
+          )}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

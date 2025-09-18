@@ -1,5 +1,11 @@
 # 🏌️ GlideShot — World-Class 3D Minigolf Clone
 
+## Security notes
+
+- Client-side Firebase config now reads from `NEXT_PUBLIC_*` env vars. These are expected for frontend use and are safe to expose.
+- Do not keep Admin SDK secrets (service account private keys) in the client repository. If present in `.env`, ensure they are not imported or used on the client, and consider moving them to server-only environment variables or a secret store. Remove the private key from version control and rotate it if it was ever committed.
+- The server-backed scoring API (`/api/scores/post`) should use server-side credentials only; the client only calls this endpoint.
+
 ## Overview
 GlideShot is a modern, web-based 3D minigolf game inspired by the open-source classic "Open Golf." It is rebuilt for the web with a focus on elegance, interactivity, and persistent scoring. GlideShot combines smooth gameplay, aesthetic minimalism, and robust backend integration to deliver a world-class experience.
 
@@ -16,21 +22,25 @@ GlideShot is a modern, web-based 3D minigolf game inspired by the open-source cl
 
 ## Quick Start
 1. **Clone the repository:**
-	```sh
-	git clone https://github.com/varunaditya27/GlideShot.git
-	cd GlideShot
-	```
+
+```sh
+git clone https://github.com/varunaditya27/GlideShot.git
+cd GlideShot
+```
 2. **Install dependencies:**
-	```sh
-	npm install
-	```
+
+```sh
+npm install
+```
 3. **Configure Firebase:**
-	- Create a Firebase project (Firestore + Auth enabled)
-	- Copy your config to `lib/firebaseConfig.ts`
+
+- Create a Firebase project (Firestore + Auth enabled)
+- Put your client config in `.env` as `NEXT_PUBLIC_*` vars (already wired in `src/lib/firebaseConfig.ts`). Avoid placing Admin keys in client repos.
 4. **Run the development server:**
-	```sh
-	npm run dev
-	```
+
+```sh
+npm run dev
+```
 5. **Open in browser:**
 	- Visit [http://localhost:3000](http://localhost:3000)
 

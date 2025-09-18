@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 
 interface Entry {
   uid: string;
+  name?: string | null;
   strokes: number;
   par?: number | null;
   timestamp?: string;
@@ -45,7 +46,7 @@ export default function Leaderboard({ levelId }: { levelId: string }) {
       <ol style={{ margin: 0, paddingLeft: 18 }}>
         {entries.map((e, i) => (
           <li key={e.uid} style={{ marginBottom: 4 }}>
-            <span style={{ width: 20, display: 'inline-block' }}>{i + 1}.</span> {e.uid.slice(0, 6)}… — {e.strokes} strokes
+            <span style={{ width: 20, display: 'inline-block' }}>{i + 1}.</span> {e.name || `${e.uid.slice(0, 6)}…`} — {e.strokes} strokes
             {typeof e.par === 'number' ? ` (par ${e.par})` : ''}
           </li>
         ))}

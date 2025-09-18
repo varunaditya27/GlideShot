@@ -293,7 +293,12 @@ function GameContent({ user }: { user: User }) {
     playBeep(330, 0.05, 'sine', 0.04);
   };
 
+  // Guard to ensure we only post the score once per hole
+  const postedRef = useRef(false);
+
   const handleGoal = () => {
+    if (postedRef.current) return; // already handled this goal
+    postedRef.current = true;
     setGameState('holed');
     const finalStrokes = strokes + 1;
     const currentLevel = levels[levelIndex];
@@ -323,6 +328,7 @@ function GameContent({ user }: { user: User }) {
         setStrokes(0);
         setGameState('ready');
         setNotice(null);
+        postedRef.current = false; // ready for next hole's submission
       }
     }, 1800);
   };

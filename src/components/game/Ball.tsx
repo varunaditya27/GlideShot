@@ -7,7 +7,7 @@ interface BallProps {
 
 export default function Ball({ position }: BallProps) {
   return (
-    <Sphere args={[0.2, 32, 32]} position={position}>
+    <Sphere args={[0.2, 16, 16]} position={position}>
       <meshStandardMaterial color="white" />
     </Sphere>
   );

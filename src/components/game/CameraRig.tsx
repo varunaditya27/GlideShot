@@ -40,16 +40,7 @@ export default function CameraRig({
     lookAt.current.copy(target).add(lookOffset);
     camera.lookAt(lookAt.current);
 
-    // FOV zoom based on speed (subtle)
-    const speed = velocity.length();
-    const baseFov = 55;
-    const maxDelta = 6; // up to +6 degrees on fast shots
-    const targetFov = baseFov + Math.min(speed * 1.8, maxDelta);
-    if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
-      const pc = camera as THREE.PerspectiveCamera;
-      pc.fov += (targetFov - pc.fov) * 0.08;
-      pc.updateProjectionMatrix();
-    }
+    // Keep FOV stable to avoid projection flicker
   });
 
   return null;

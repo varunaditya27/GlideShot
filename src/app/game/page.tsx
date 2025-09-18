@@ -1,10 +1,7 @@
 "use client";
 
-import React, { useState, useRef, Dispatch, SetStateAction } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { PerspectiveCamera, PerformanceMonitor, AdaptiveDpr } from '@react-three/drei';
-import CameraRig from '@/components/game/CameraRig';
-import Visuals from '@/components/game/Visuals';
 import * as THREE from 'three';
 import { User } from 'firebase/auth';
 import Level from '@/components/game/Level';
@@ -15,33 +12,38 @@ import Leaderboard from '@/components/ui/Leaderboard';
 import Auth from '@/components/auth/Auth';
 import { useAuth } from '@/hooks/useAuth';
 import { saveScore } from '@/lib/firestore';
-import { useEffect } from 'react';
 
 // This component will live inside the Canvas and handle the game loop
 interface GameSceneProps {
-  ballPosition: THREE.Vector3;
+  ballPosRef: React.MutableRefObject<THREE.Vector3>;
   ballVelocity: React.MutableRefObject<THREE.Vector3>;
-  setBallPosition: Dispatch<SetStateAction<THREE.Vector3>>;
   onBallStop: () => void;
   onGoal: () => void;
   holePosition: THREE.Vector3;
+  onPositionUpdate: (pos: [number, number, number]) => void;
 }
 
-function GameScene({ ballPosition, ballVelocity, setBallPosition, onBallStop, onGoal, holePosition }: GameSceneProps) {
+function GameScene({ ballPosRef, ballVelocity, onBallStop, onGoal, holePosition, onPositionUpdate }: GameSceneProps) {
   useFrame((state, delta) => {
     const v = ballVelocity.current;
-    if (v.lengthSq() < 0.0001) {
+    if (v.lengthSq() < 0.001) {
       if (ballVelocity.current.length() > 0) {
         v.set(0, 0, 0);
         onBallStop();
       }
       return;
     }
-    // Clamp delta to avoid huge jumps on slow frames
-    const dt = Math.min(delta, 1 / 30);
-    const newPosition = ballPosition.clone().add(v.clone().multiplyScalar(dt));
-    const friction = 0.985; // slightly less drag for smoother motion
-    v.multiplyScalar(friction);
+    
+    // Improved delta time handling for smoother movement
+    const dt = Math.min(delta, 1 / 60);
+    const dampingFactor = Math.pow(0.98, dt * 60); // Frame-rate independent damping
+    
+    // Apply velocity to position
+    const displacement = v.clone().multiplyScalar(dt);
+    const newPosition = ballPosRef.current.clone().add(displacement);
+    
+    // Apply damping
+    v.multiplyScalar(dampingFactor);
 
     const groundSize = [20, 30];
     const ballRadius = 0.2;
@@ -59,11 +61,13 @@ function GameScene({ ballPosition, ballVelocity, setBallPosition, onBallStop, on
       newPosition.z = Math.max(minZ, Math.min(newPosition.z, maxZ));
     }
 
-    const holeRadius = 0.2;
-    if (newPosition.distanceTo(holePosition) < holeRadius && v.length() < 1.0) {
+    const holeRadius = 0.25;
+    if (newPosition.distanceTo(holePosition) < holeRadius && v.length() < 1.5) {
       onGoal();
     } else {
-      setBallPosition(newPosition);
+      ballPosRef.current.copy(newPosition);
+      // Update the visual position for smooth animation
+      onPositionUpdate([newPosition.x, newPosition.y, newPosition.z]);
     }
   });
 
@@ -73,8 +77,9 @@ function GameScene({ ballPosition, ballVelocity, setBallPosition, onBallStop, on
 // The actual game content
 function GameContent({ user }: { user: User }) {
   const [gameState, setGameState] = useState<'ready' | 'shot' | 'holed'>('ready');
-  const [ballPosition, setBallPosition] = useState(new THREE.Vector3(0, 0.2, 10));
+  const ballPosition = useRef(new THREE.Vector3(0, 0.2, 10));
   const ballVelocity = useRef(new THREE.Vector3(0, 0, 0));
+  const [ballRenderPosition, setBallRenderPosition] = useState<[number, number, number]>([0, 0.2, 10]);
   const [strokes, setStrokes] = useState(0);
   const [levelIndex, setLevelIndex] = useState(0);
   const [levels, setLevels] = useState<Array<{ id: string; name: string; par: number; start: [number, number, number]; hole: [number, number, number] }>>([]);
@@ -85,7 +90,7 @@ function GameContent({ user }: { user: User }) {
   const [showHelp, setShowHelp] = useState(true);
   const [aiming, setAiming] = useState(false);
   const [aimPower, setAimPower] = useState(0);
-  const [effectsEnabled, setEffectsEnabled] = useState(true);
+  
 
   // Load level configs from public/levels
   useEffect(() => {
@@ -110,10 +115,15 @@ function GameContent({ user }: { user: User }) {
         setLevelName(l.name);
         setHole(l.hole);
         // set ball before first frame so camera rig initializes at correct position
-        setBallPosition(new THREE.Vector3(...l.start));
+        ballPosition.current.set(l.start[0], l.start[1], l.start[2]);
+        setBallRenderPosition([l.start[0], l.start[1], l.start[2]]);
       }
     });
   }, []);
+
+  const handlePositionUpdate = (pos: [number, number, number]) => {
+    setBallRenderPosition(pos);
+  };
 
   const handleShoot = (velocity: THREE.Vector3) => {
     ballVelocity.current.copy(velocity);
@@ -144,7 +154,8 @@ function GameContent({ user }: { user: User }) {
         setLevelName(next.name);
         setHole(next.hole);
         ballVelocity.current.set(0, 0, 0);
-        setBallPosition(new THREE.Vector3(...next.start));
+        ballPosition.current.set(next.start[0], next.start[1], next.start[2]);
+        setBallRenderPosition([next.start[0], next.start[1], next.start[2]]);
         setStrokes(0);
         setGameState('ready');
         setNotice(null);
@@ -174,41 +185,31 @@ function GameContent({ user }: { user: User }) {
       )}
   <Canvas
     style={{ cursor: aiming ? 'crosshair' : 'default' }}
-    dpr={[1, 1.5]}
-    gl={{ antialias: false, powerPreference: 'high-performance' }}
+    camera={{ position: [0, 15, 20], fov: 50 }}
   >
-  {/* Camera */}
-  <PerspectiveCamera makeDefault position={[0, 12, 22]} fov={55} />
-  <CameraRig target={ballPosition} velocity={ballVelocity.current} />
-
         {/* Lights */}
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[12, 18, 8]} intensity={1} />
-
-  {/* Performance adaptivity */}
-  <PerformanceMonitor threshold={0.6} onDecline={() => setEffectsEnabled(false)} onIncline={() => setEffectsEnabled(true)} />
-  <AdaptiveDpr pixelated />
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[10, 10, 5]} intensity={1} />
 
   {/* Course */}
         <Level hole={levels[levelIndex]?.hole ?? [0, 0.01, -10]} />
-        <Ball position={[ballPosition.x, ballPosition.y, ballPosition.z]} />
+        <Ball position={ballRenderPosition} />
         {gameState === 'ready' && (
           <PlayerControls
-            ballPosition={[ballPosition.x, ballPosition.y, ballPosition.z]}
+            ballPosition={ballRenderPosition}
             onShoot={handleShoot}
             onAimStart={() => setAiming(true)}
             onAimEnd={() => setAiming(false)}
             onAimChange={setAimPower}
           />
         )}
-  <Visuals enabled={effectsEnabled} />
         <GameScene
-          ballPosition={ballPosition}
+          ballPosRef={ballPosition}
           ballVelocity={ballVelocity}
-          setBallPosition={setBallPosition}
           onBallStop={handleBallStop}
           onGoal={handleGoal}
           holePosition={new THREE.Vector3(...(levels[levelIndex]?.hole ?? [0, 0.01, -10]))}
+          onPositionUpdate={handlePositionUpdate}
         />
       </Canvas>
     </div>

@@ -67,9 +67,10 @@ export default function PlayerControls({ ballPosition, onShoot, onAimStart, onAi
   };
 
   // We need to calculate the arrow's direction vector from the aim state
-  const arrowVector = new THREE.Vector3().copy(aim.direction).multiplyScalar(aim.power + 0.5);
-  const start = new THREE.Vector3(...ballPosition);
-  const end = start.clone().add(arrowVector);
+  const arrowVector = new THREE.Vector3(aim.direction.x, aim.direction.y, aim.direction.z).multiplyScalar(aim.power + 0.5);
+  const start = new THREE.Vector3(ballPosition[0], ballPosition[1], ballPosition[2]);
+  const end = new THREE.Vector3(start.x + arrowVector.x, start.y + arrowVector.y, start.z + arrowVector.z);
+  const coneYaw = Math.atan2(-aim.direction.x, -aim.direction.z);
 
   return (
     <group>
@@ -98,7 +99,7 @@ export default function PlayerControls({ ballPosition, onShoot, onAimStart, onAi
       )}
       {/* Arrowhead cone */}
       {isDragging && (
-        <mesh position={end} rotation={[0, Math.atan2(-aim.direction.x, -aim.direction.z), 0]}>
+        <mesh position={end} rotation={[0, coneYaw, 0]}>
           <coneGeometry args={[0.2, 0.5, 12]} />
           <meshStandardMaterial color={0xffcc00} />
         </mesh>

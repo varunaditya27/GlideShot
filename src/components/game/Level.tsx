@@ -31,10 +31,21 @@ export default function Level({ hole = [0, 0.01, -10] as [number, number, number
         <meshStandardMaterial color="#5f5f5f" roughness={0.9} metalness={0.02} />
       </Box>
 
-      {/* Hole */}
+      {/* Hole with enhanced visibility */}
+      {/* Hole rim for better definition */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[hole[0], hole[1] + 0.001, hole[2]]}>
+        <ringGeometry args={[0.2, 0.28, 32]} />
+        <meshStandardMaterial color="#2e2e2e" roughness={0.8} />
+      </mesh>
+      {/* Main hole */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={hole}>
-        <cylinderGeometry args={[0.2, 0.2, 0.1, 32]} />
+        <cylinderGeometry args={[0.2, 0.2, 0.15, 32]} />
         <meshStandardMaterial color="black" />
+      </mesh>
+      {/* Glowing ring around hole for better visibility */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[hole[0], hole[1] + 0.002, hole[2]]}>
+        <ringGeometry args={[0.28, 0.32, 32]} />
+        <meshStandardMaterial color="#ffeb3b" emissive="#ffeb3b" emissiveIntensity={0.3} />
       </mesh>
 
       {/* Flag pole and flag */}

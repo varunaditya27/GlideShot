@@ -14,13 +14,13 @@ export default function Visuals({ enabled = true }: { enabled?: boolean }) {
       <ContactShadows position={[0, 0, 0]} opacity={0.4} width={40} height={40} blur={2.5} far={20} />
 
       {/* Subtle postprocessing (can be disabled for performance) */}
-      {enabled && (
+      {enabled ? (
         <EffectComposer>
           <SMAA />
           <Bloom intensity={0.15} luminanceThreshold={0.8} luminanceSmoothing={0.2} />
           <Vignette eskil={false} offset={0.2} darkness={0.7} blendFunction={BlendFunction.NORMAL} />
         </EffectComposer>
-      )}
+      ) : null}
     </>
   );
 }

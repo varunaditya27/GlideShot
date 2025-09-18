@@ -70,7 +70,7 @@ export default function PlayerControls({ ballPosition, onShoot, onAimStart, onAi
   const arrowVector = new THREE.Vector3(aim.direction.x, aim.direction.y, aim.direction.z).multiplyScalar(aim.power + 0.5);
   const start = new THREE.Vector3(ballPosition[0], ballPosition[1], ballPosition[2]);
   const end = new THREE.Vector3(start.x + arrowVector.x, start.y + arrowVector.y, start.z + arrowVector.z);
-  const coneYaw = Math.atan2(-aim.direction.x, -aim.direction.z);
+  // Removed 3D cone arrowhead to keep aim assist minimal and clean
 
   // Power-based color (green -> yellow -> red)
   const powerNorm = Math.min(aim.power, 5) / 5; // 0..1
@@ -92,13 +92,15 @@ export default function PlayerControls({ ballPosition, onShoot, onAimStart, onAi
   };
   const powerColor = hslToHex(hue, 90, 55);
 
-  // Dotted trajectory preview (cheap): a few flat discs along the aim direction
-  const dotCount = 8;
-  const dotSpacing = 0.7; // world units between dots
+  // Predictive trajectory preview (very cheap): geometric falloff to mimic damping
+  const dotCount = 10;
+  const baseStep = 0.6 + powerNorm * 0.9; // scaled by power
+  const decay = 0.82; // 0..1, lower = quicker slowdown
   const dots: THREE.Vector3[] = [];
   if (isDragging) {
-    for (let i = 1; i <= dotCount; i++) {
-      const dist = i * dotSpacing * (0.6 + powerNorm * 0.8); // extend with power
+    for (let i = 0; i < dotCount; i++) {
+      const geoSum = (1 - Math.pow(decay, i + 1)) / (1 - decay); // geometric sum
+      const dist = baseStep * geoSum;
       const p = new THREE.Vector3(
         start.x + aim.direction.x * dist,
         0.02,
@@ -124,30 +126,46 @@ export default function PlayerControls({ ballPosition, onShoot, onAimStart, onAi
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
-  {/* Aiming line */}
-  {isDragging && <Line points={[start, end]} color={powerColor} lineWidth={2} />}
+      {/* Aiming line + soft glow */}
+      {isDragging && (
+        <>
+          <Line points={[start, end]} color={powerColor} lineWidth={2} />
+          <Line points={[start, end]} color={powerColor} lineWidth={5} transparent opacity={0.15} />
+        </>
+      )}
       {/* Aiming ring at the ball */}
       {isDragging && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[ballPosition[0], 0.02, ballPosition[2]]}>
-          <ringGeometry args={[0.22, 0.25 + Math.min(aim.power, 5) * 0.05, 32]} />
-          <meshBasicMaterial color={powerColor} transparent opacity={0.9} />
-        </mesh>
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[ballPosition[0], 0.02, ballPosition[2]]}>
+            <ringGeometry args={[0.22, 0.25 + Math.min(aim.power, 5) * 0.05, 48]} />
+            <meshBasicMaterial color={powerColor} transparent opacity={0.9} />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[ballPosition[0], 0.021, ballPosition[2]]}>
+            <ringGeometry args={[0.26, 0.34, 48]} />
+            <meshBasicMaterial color={powerColor} transparent opacity={0.22} blending={THREE.AdditiveBlending} />
+          </mesh>
+        </>
       )}
-      {/* Arrowhead cone */}
-      {isDragging && (
-        <mesh position={end} rotation={[0, coneYaw, 0]}>
-          <coneGeometry args={[0.2, 0.5, 12]} />
-          <meshStandardMaterial color={powerColor} />
-        </mesh>
-      )}
+      {/* Arrowhead removed per design refinement */}
 
-      {/* Dotted trajectory */}
-      {isDragging && dots.map((p, idx) => (
-        <mesh key={idx} position={[p.x, p.y, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.06 + idx * 0.004, 12]} />
-          <meshBasicMaterial color={powerColor} transparent opacity={0.85 - idx * 0.08} />
-        </mesh>
-      ))}
+      {/* Dotted trajectory with falloff */}
+      {isDragging && dots.map((p, idx) => {
+        const t = idx / dotCount; // 0..1
+        const size = 0.065 + t * 0.05;
+        const alpha = 0.9 * (1 - t);
+        return (
+          <group key={idx}>
+            <mesh position={[p.x, p.y, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[size, 16]} />
+              <meshBasicMaterial color={powerColor} transparent opacity={alpha} />
+            </mesh>
+            <mesh position={[p.x, p.y + 0.0005, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[size * 1.25, 16]} />
+              <meshBasicMaterial color={powerColor} transparent opacity={alpha * 0.18} blending={THREE.AdditiveBlending} />
+            </mesh>
+          </group>
+        );
+      })}
     </group>
   );
 }

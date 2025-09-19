@@ -109,7 +109,7 @@ export default function Home() {
             <a href="#how" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">How to Play</a>
             <a href="#progress" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">Progress</a>
             <a href="#tech" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">Tech</a>
-            <a href="#testimonials" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">Testimonials</a>
+            <a href="#principles" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">Principles</a>
             <a href="#faq" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">FAQ</a>
           </nav>
           <div className="hidden md:flex items-center gap-3">

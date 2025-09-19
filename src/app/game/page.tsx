@@ -6,7 +6,8 @@ import * as THREE from 'three';
 import { User } from 'firebase/auth';
 import Level from '@/components/game/Level';
 import Ball from '@/components/game/Ball';
-import PlayerControls from '@/components/game/PlayerControls';
+import PlayerControls, { PlayerControlsHandle } from '@/components/game/PlayerControls';
+import AimAssist from '@/components/game/AimAssist';
 import HUD from '@/components/ui/HUD';
 import Leaderboard from '@/components/ui/Leaderboard';
 import Auth from '@/components/auth/Auth';
@@ -221,6 +222,7 @@ function GameContent({ user }: { user: User }) {
   const holePulseTriggerRef = useRef<(() => void) | null>(null);
   const bounceBurstTriggerRef = useRef<((pos: THREE.Vector3) => void) | null>(null);
   const goalBurstTriggerRef = useRef<((pos: THREE.Vector3) => void) | null>(null);
+  const playerControlsRef = useRef<PlayerControlsHandle | null>(null); // internal ref to access aim data
 
   // Minimal WebAudio beeps for feedback
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -373,13 +375,22 @@ function GameContent({ user }: { user: User }) {
   <ParticlesBurst color="#ffeb3b" count={18} triggerRef={goalBurstTriggerRef} />
   <Ball positionRef={ballPosition} velocityRef={ballVelocity} />
         {gameState === 'ready' && (
-          <PlayerControls
-            ballPosition={[ballPosition.current.x, ballPosition.current.y, ballPosition.current.z]}
-            onShoot={handleShoot}
-            onAimStart={() => setAiming(true)}
-            onAimEnd={() => setAiming(false)}
-            onAimChange={setAimPower}
-          />
+          <>
+            <PlayerControls
+              ref={playerControlsRef}
+              ballPosition={[ballPosition.current.x, ballPosition.current.y, ballPosition.current.z]}
+              onShoot={handleShoot}
+              onAimStart={() => setAiming(true)}
+              onAimEnd={() => setAiming(false)}
+              onAimChange={setAimPower}
+            />
+            <AimAssist
+              active={aiming}
+              origin={ballPosition.current}
+              direction={playerControlsRef.current?.getDirection() || new THREE.Vector3(0,0,-1)}
+              power={playerControlsRef.current?.getPower() || 0}
+            />
+          </>
         )}
         <GameScene
           ballPosRef={ballPosition}

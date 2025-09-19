@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Intersection } from 'three';
-import { Line } from '@react-three/drei';
 
-interface PlayerControlsProps {
+export interface PlayerControlsProps {
   ballPosition: [number, number, number];
   onShoot: (velocity: THREE.Vector3) => void;
   onAimStart?: () => void;
@@ -14,7 +13,13 @@ interface PlayerControlsProps {
   onAimChange?: (power: number) => void;
 }
 
-export default function PlayerControls({ ballPosition, onShoot, onAimStart, onAimEnd, onAimChange }: PlayerControlsProps) {
+export interface PlayerControlsHandle {
+  getDirection: () => THREE.Vector3;
+  getPower: () => number;
+  isAiming: () => boolean;
+}
+
+const PlayerControls = forwardRef<PlayerControlsHandle, PlayerControlsProps>(function PlayerControls({ ballPosition, onShoot, onAimStart, onAimEnd, onAimChange }, ref) {
   const [aim, setAim] = useState({ direction: new THREE.Vector3(0, 0, -1), power: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const startDragPoint = useRef<THREE.Vector3 | null>(null);
@@ -66,49 +71,13 @@ export default function PlayerControls({ ballPosition, onShoot, onAimStart, onAi
     }
   };
 
-  // We need to calculate the arrow's direction vector from the aim state
-  const arrowVector = new THREE.Vector3(aim.direction.x, aim.direction.y, aim.direction.z).multiplyScalar(aim.power + 0.5);
-  const start = new THREE.Vector3(ballPosition[0], ballPosition[1], ballPosition[2]);
-  const end = new THREE.Vector3(start.x + arrowVector.x, start.y + arrowVector.y, start.z + arrowVector.z);
-  // Removed 3D cone arrowhead to keep aim assist minimal and clean
+  // (Aiming visuals + prediction handled by AimAssist component now)
 
-  // Power-based color (green -> yellow -> red)
-  const powerNorm = Math.min(aim.power, 5) / 5; // 0..1
-  const hue = 120 - 120 * powerNorm; // 120 (green) to 0 (red)
-  const hslToHex = (h: number, s: number, l: number) => {
-    s /= 100; l /= 100;
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    const m = l - c / 2;
-    let r = 0, g = 0, b = 0;
-    if (0 <= h && h < 60) { r = c; g = x; b = 0; }
-    else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
-    else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
-    else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
-    else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
-    else { r = c; g = 0; b = x; }
-    const toHex = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  };
-  const powerColor = hslToHex(hue, 90, 55);
-
-  // Predictive trajectory preview (very cheap): geometric falloff to mimic damping
-  const dotCount = 10;
-  const baseStep = 0.6 + powerNorm * 0.9; // scaled by power
-  const decay = 0.82; // 0..1, lower = quicker slowdown
-  const dots: THREE.Vector3[] = [];
-  if (isDragging) {
-    for (let i = 0; i < dotCount; i++) {
-      const geoSum = (1 - Math.pow(decay, i + 1)) / (1 - decay); // geometric sum
-      const dist = baseStep * geoSum;
-      const p = new THREE.Vector3(
-        start.x + aim.direction.x * dist,
-        0.02,
-        start.z + aim.direction.z * dist
-      );
-      dots.push(p);
-    }
-  }
+  useImperativeHandle(ref, () => ({
+    getDirection: () => aim.direction,
+    getPower: () => aim.power,
+    isAiming: () => isDragging,
+  }), [aim.direction, aim.power, isDragging]);
 
   return (
     <group>
@@ -126,46 +95,9 @@ export default function PlayerControls({ ballPosition, onShoot, onAimStart, onAi
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      {/* Aiming line + soft glow */}
-      {isDragging && (
-        <>
-          <Line points={[start, end]} color={powerColor} lineWidth={2} />
-          <Line points={[start, end]} color={powerColor} lineWidth={5} transparent opacity={0.15} />
-        </>
-      )}
-      {/* Aiming ring at the ball */}
-      {isDragging && (
-        <>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[ballPosition[0], 0.02, ballPosition[2]]}>
-            <ringGeometry args={[0.22, 0.25 + Math.min(aim.power, 5) * 0.05, 48]} />
-            <meshBasicMaterial color={powerColor} transparent opacity={0.9} />
-          </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[ballPosition[0], 0.021, ballPosition[2]]}>
-            <ringGeometry args={[0.26, 0.34, 48]} />
-            <meshBasicMaterial color={powerColor} transparent opacity={0.22} blending={THREE.AdditiveBlending} />
-          </mesh>
-        </>
-      )}
-      {/* Arrowhead removed per design refinement */}
-
-      {/* Dotted trajectory with falloff */}
-      {isDragging && dots.map((p, idx) => {
-        const t = idx / dotCount; // 0..1
-        const size = 0.065 + t * 0.05;
-        const alpha = 0.9 * (1 - t);
-        return (
-          <group key={idx}>
-            <mesh position={[p.x, p.y, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
-              <circleGeometry args={[size, 16]} />
-              <meshBasicMaterial color={powerColor} transparent opacity={alpha} />
-            </mesh>
-            <mesh position={[p.x, p.y + 0.0005, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
-              <circleGeometry args={[size * 1.25, 16]} />
-              <meshBasicMaterial color={powerColor} transparent opacity={alpha * 0.18} blending={THREE.AdditiveBlending} />
-            </mesh>
-          </group>
-        );
-      })}
+      {/* (Visual aim elements moved to AimAssist component) */}
     </group>
   );
-}
+});
+
+export default PlayerControls;

@@ -1,51 +1,54 @@
-# GlideShot Bonus & Innovative Features
+# Roadmap & Potential Enhancements
 
-## Overview
+This document separates what exists now from ideas explicitly not implemented. It provides a factual baseline for future iteration while avoiding speculative claims in other documentation.
 
-GlideShot goes beyond the basics with a suite of bonus and innovative features designed to enhance engagement, replayability, and polish—without compromising smooth gameplay.
+## Implemented (As of Current Commit)
+ 
+| Area | Implemented |
+|------|-------------|
+| Core Gameplay | Drag to aim/shoot, 3 custom physics levels |
+| Scoring | Stroke counting, per-level par, relative score |
+| Persistence | Score + leaderboard Firestore writes |
+| Auth | Firebase email/password |
+| Visual Feedback | Aim assist, particles (bounce/goal), hole pulse |
+| Audio | Minimal Web Audio beeps |
+| UI | HUD, leaderboard, notice overlay |
 
-## Bonus Features (from Plan)
+## Near-Term Candidate Enhancements (Not Implemented)
+ 
+| Category | Idea | Rationale |
+|----------|------|-----------|
+| Physics | Slopes / ramps | Adds depth & shot planning |
+| Gameplay | Moving obstacles | Increases challenge variety |
+| UX | Level selector screen | Manual replay & practice |
+| Feedback | Replay last shot camera | Skill learning tool |
+| Progression | Additional level set | Content longevity |
+| Accessibility | Keyboard-only aim mode | Inclusive input |
+| Performance | Dynamic resolution scaling | Better low-end FPS |
 
-- **Third Level with Terrain Variations:** Ramps, slopes, curves for challenge
-- **Level Selector/Navigator:** Choose holes or progress linearly
-- **Replay Camera:** Cinematic slow-motion replay of last stroke
-- **Physics Polish:** Spin, bounce, wind effects
-- **Leaderboard System:** Global and per-level
-- **Persistent Score Tracking:** Resume progress across sessions
-- **Email Auth:** Secure, user-linked scores
-- **Dynamic Transitions:** Fade/slide animations
-- **Light/Dark Mode Toggle:** Flexible aesthetics
-- **Audio Cues:** Subtle putt, chime, and ambient sounds
-- **Particles/FX:** Glow ring, ball trail, confetti
-- **Share Score Links:** Social bragging
-- **Daily Challenge Mode:** New challenge each day
-- **Custom Skins:** Unlockable ball textures
+## Longer-Term Concepts (Not Implemented)
+ 
+| Concept | Notes |
+|---------|-------|
+| Wind / Spin | Additional physics layer; careful tuning required |
+| Achievements | Meta goals & retention |
+| Daily Challenge | Rotating featured level variant |
+| Cosmetic Skins | Non-paywalled personalization |
+| Cloud Replays | Store top shots for ghost comparisons |
+| Multi-Player Ghost Mode | Async competition |
+| Mobile Haptics | Enhance impact feel |
 
-## Additional Innovations
+## Evaluation Principles
+ 
+When considering additions:
 
-- **Wind/Weather:** Subtle, toggleable wind for advanced play
-- **Power-Ups:** Temporary effects (speed, friction, aim)
-- **Moving Obstacles:** Rotating/sliding barriers
-- **Ghost Ball:** Replay best shot as a translucent ghost
-- **Undo Last Stroke:** Limited-use undo (casual mode)
-- **Friend Challenges:** Invite friends to beat your score
-- **Spectator Mode:** Watch friends in real-time
-- **In-Game Chat:** Minimal, toggleable
-- **Accessibility:** High-contrast, TTS, keyboard nav
-- **Tutorial/Onboarding:** Interactive guide
-- **Achievements/Badges:** Milestones for skill
-- **Customizable Controls:** Remap keys, adjust sensitivity
-- **Dynamic Environment:** Day/night, seasonal themes
-- **Haptic Feedback:** Vibration on mobile
-- **Ambient Soundscapes:** Birds, breeze, water
-- **Unlockable Courses:** Earn points to unlock new holes
-- **Stats Dashboard:** Visualize player stats
-- **Weekly Tournaments:** Compete in time-limited events
+1. Preserve minimal bundle growth (budget first, feature second).
+2. Avoid introducing heavy physics libs unless essential.
+3. Keep UI surface area restrained—focus on clarity.
+4. Ensure opt-in for visually intensive effects.
 
-## Implementation Notes
+## Out of Scope (Deliberately Excluded For Now)
+ 
+Ads, monetization hooks, in-game chat, real-time spectator streaming, complex economy systems.
 
-- All features are toggleable/optional to avoid clutter
-- Performance and usability prioritized
-- Progressive enhancement: core gameplay always smooth
-
-See other docs for integration and technical details.
+All items outside the Implemented table above are currently absent from the repository.

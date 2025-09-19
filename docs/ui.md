@@ -1,45 +1,44 @@
-# GlideShot UI & UX
+# UI & UX
 
-## Overview
+This covers the currently implemented interface pieces only.
 
-GlideShot features a minimal, elegant, and highly usable interface. The UI is designed to be non-intrusive, providing all essential information and controls while keeping the focus on gameplay and 3D visuals.
+## HUD
 
-## HUD Elements
+* Positioned top-left.
+* Displays strokes, par, relative score (E / + / −), and a horizontal power bar with tick marks.
+* Power bar gradient: green → yellow → red (proportional fill, linear transition).
+* Accessible labels (aria) for score card and power percentage.
 
-- **Top-Left:** Hole number, par, stroke count
-- **Bottom:** Power bar (horizontal or radial)
-- **Aiming Arrow:** Thin glowing line with gradient, points in shot direction
-- **Score/Leaderboard:** Slide-in panel or modal
-- **Notifications:** Subtle popups for achievements, hole completion, etc.
+## Aim Assist
 
-## Controls
+* Active while dragging.
+* Components: direction line (sharp + glow), predictive decay dots, ghost ball, dynamic color scaling by normalized power.
+* All geometry & materials reused (allocation minimization).
 
-- **Aiming:** Drag mouse/touch or use keyboard arrows
-- **Power:** Click/drag or hold/release to set shot strength
-- **Camera:** Orbit, pan, zoom (mouse/touch/keyboard)
-- **Menus:** Accessible via hamburger or overlay
+## Leaderboard Panel
 
-## Visual Feedback
+* Positioned top-right (absolute overlay).
+* Shows ranked top entries (up to 10) for current level (sorted by strokes asc).
+* Relative vs par badge (color: green below, gray even, red above par).
+* Skeleton placeholders while loading.
+* Graceful error message if fetch fails.
 
-- **Aiming:** Arrow glows and rotates as user aims
-- **Power:** Bar fills with color gradient, subtle vibration at max
-- **Stroke:** Ball animates, camera follows, replay available
-- **Goal:** Glow ring, confetti, sound cue
+## Hole Completion Notice
 
-## Accessibility
+* Temporary centered text badge after goal event.
+* Clears automatically when next level loads.
 
-- High-contrast mode
-- Keyboard navigation for all UI
-- Text-to-speech for essential info
+## Feedback Effects
 
-## Animations & Transitions
+| Effect | Purpose |
+|--------|---------|
+| Hole Pulse | Visual focus + success acknowledgment |
+| Bounce Particles | Reinforce collision feedback |
+| Goal Particles | Highlight successful putt |
+| Audio Beeps | Minimal shot / stop / success triad |
 
-- Fade/slide between states (hole complete, new level)
-- Subtle hover and click animations
+## Not Implemented (UI)
 
-## Customization
+Menus, settings panel, theme toggle, accessibility high-contrast mode, keyboard navigation framework, replay viewer, achievements toasts, mobile responsive optimizations (layout presently desktop-focused), touch gesture special states.
 
-- Light/dark mode toggle
-- Unlockable ball skins
-
-See `gameplay.md` and `physics.md` for more details on in-game feedback.
+See `gameplay.md` for loop specifics and `performance.md` for optimization techniques applied to UI rendering.

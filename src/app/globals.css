@@ -125,6 +125,23 @@
   }
 }
 
+@keyframes shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@layer utilities {
+  .animate-shimmer { animation: shimmer 1.4s linear infinite; }
+  .interactive-tilt {
+    transition: transform 0.4s cubic-bezier(.16,.84,.44,1), box-shadow 0.4s;
+  }
+  .interactive-tilt:hover { transform: translateY(-4px) rotateX(6deg) rotateY(-4deg); }
+  .interactive-tilt:active { transform: translateY(-1px) scale(.98); }
+  @media (prefers-reduced-motion: reduce) {
+    .interactive-tilt, .interactive-tilt:hover, .interactive-tilt:active { transform: none !important; }
+  }
+}
+
 @keyframes bounce-slow {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-32px); }

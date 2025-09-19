@@ -4,13 +4,13 @@
 "use client";
 import React from "react";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useMotionValueEvent } from "framer-motion";
 // import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { auth } from "@/lib/firebaseConfig";
 import { GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { LayoutDashboard, Sparkles, MoonStar } from "lucide-react";
+import { LayoutDashboard, Sparkles, MoonStar, Target, Globe2, Gauge, ShieldCheck, Cpu, ArrowUp, Play, LogIn } from "lucide-react";
 
 const headingFont = {
   fontFamily: "'Montserrat', 'Geist', 'Fira Sans', Arial, sans-serif",
@@ -18,7 +18,16 @@ const headingFont = {
 
 export default function Home() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { scrollYProgress } = useScroll();
+  const [showFab, setShowFab] = React.useState(false);
+  const [showTopBtn, setShowTopBtn] = React.useState(false);
+  useMotionValueEvent(scrollYProgress, 'change', (v) => {
+    if (v > 0.08 && !showFab) setShowFab(true);
+    if (v <= 0.08 && showFab) setShowFab(false);
+    if (v > 0.25 && !showTopBtn) setShowTopBtn(true);
+    if (v <= 0.25 && showTopBtn) setShowTopBtn(false);
+  });
   const prefersReducedMotion = useReducedMotion();
   // Force dark mode for immersive experience
   React.useEffect(() => {
@@ -49,12 +58,44 @@ export default function Home() {
     }));
   }, []);
 
+  // Reusable intersection observer reveal component (no Framer dependency for mount)
+  type InViewProps = { y?: number; className?: string; once?: boolean; delay?: number };
+  const InViewFade: React.FC<React.PropsWithChildren<InViewProps>> = ({ children, y = 32, className = "", once = true, delay = 0 }) => {
+    const ref = React.useRef<HTMLDivElement | null>(null);
+    const [visible, setVisible] = React.useState(false);
+    React.useEffect(() => {
+      if (!ref.current) return;
+      if (prefersReducedMotion) { setVisible(true); return; }
+      const el = ref.current;
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            setVisible(true);
+            if (once) obs.disconnect();
+          } else if (!once) {
+            setVisible(false);
+          }
+        });
+      }, { threshold: 0.15 });
+      obs.observe(el);
+      return () => obs.disconnect();
+    }, [once]);
+    const style: React.CSSProperties = {
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'translateY(0)' : `translateY(${y}px)`,
+      transition: 'opacity 0.7s cubic-bezier(.16,.84,.44,1), transform 0.7s cubic-bezier(.16,.84,.44,1)',
+      transitionDelay: visible ? `${delay}s` : '0s'
+    };
+    return <div ref={ref} className={`${className} will-change-transform will-change-opacity`} style={style}>{children}</div>;
+  };
+
   return (
   <main id="top" className="relative min-h-screen flex flex-col items-center justify-start bg-gradient-to-br from-[oklch(0.13_0.08_260)] via-[oklch(0.18_0.14_320)] to-[oklch(0.269_0_0)] transition-colors duration-700 overflow-hidden px-4 md:px-0 scroll-smooth">
       {/* Skip to content for keyboard users */}
       <a href="#hero" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:bg-black/70 focus:text-white focus:px-3 focus:py-2 focus:rounded-md z-50">Skip to content</a>
       {/* Top Navigation / Branding */}
-      <header className="z-30 w-full sticky top-0 backdrop-blur-xl bg-[linear-gradient(to_bottom,rgba(10,10,12,0.72),rgba(10,10,12,0.45))] border-b border-white/10 shadow-[0_6px_20px_rgba(0,0,0,0.25)]">
+      <header className="z-30 w-full sticky top-0 backdrop-blur-xl bg-[linear-gradient(to_bottom,rgba(10,10,12,0.72),rgba(10,10,12,0.45))] border-b border-white/10 shadow-[0_6px_20px_rgba(0,0,0,0.25)]" role="banner">
+        <motion.div aria-hidden className="fixed top-0 left-0 h-[3px] w-full origin-left z-40 bg-gradient-to-r from-[oklch(0.398_0.07_227.392)] via-[oklch(0.828_0.189_84.429)] to-[oklch(0.769_0.188_70.08)]" style={{ scaleX: scrollYProgress }} />
         <div className="max-w-6xl mx-auto flex items-center justify-between py-3 px-2 md:px-6 relative">
           <div aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
         <div className="flex items-center gap-2 select-none">
@@ -63,10 +104,12 @@ export default function Home() {
               <span className="text-white/90 font-bold text-base tracking-wide">GlideShot</span>
             </a>
         </div>
-          <nav className="hidden md:flex items-center gap-6 text-white/75 text-sm">
+          <nav className="hidden md:flex items-center gap-6 text-white/75 text-sm" aria-label="Primary navigation">
             <a href="#features" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">Features</a>
             <a href="#how" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">How to Play</a>
             <a href="#progress" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">Progress</a>
+            <a href="#tech" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">Tech</a>
+            <a href="#testimonials" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">Testimonials</a>
             <a href="#faq" className="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 rounded px-1">FAQ</a>
           </nav>
           <div className="hidden md:flex items-center gap-3">
@@ -147,14 +190,14 @@ export default function Home() {
       >
         <span className="bg-gradient-to-r from-[oklch(0.828_0.189_84.429)] to-[oklch(0.398_0.07_227.392)] bg-clip-text text-transparent">The Art of Digital Mini-Golf</span>
       </motion.p>
-  <motion.p
+      <motion.p
         className="text-base md:text-lg text-center text-muted-foreground max-w-2xl mb-12 font-montserrat animate-fade-in mx-auto"
         initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.1, duration: 0.7 }}
       >
-        Glide through stunning, interactive 3D courses. Master the perfect shot with intuitive controls, mesmerizing visuals, and a soundtrack that flows with your every move.<br className="hidden md:block" />
-        <span className="text-primary font-semibold">Challenge yourself. Compete globally. Redefine your game night.</span>
+        Play a browser-based mini‑golf experience with drag aiming, physically simulated ball movement, and persistent per‑level best scores when signed in.<br className="hidden md:block" />
+        <span className="text-primary font-semibold">Sign in to store progress and appear on the leaderboard.</span>
       </motion.p>
 
   {/* Call to Action Button */}
@@ -167,26 +210,34 @@ export default function Home() {
         className="z-20 mb-16"
       >
         <div className="flex items-center gap-3">
-          <button
-            onClick={async () => {
-              if (user) {
-                router.push('/game');
-                return;
-              }
-              try {
-                await setPersistence(auth, browserLocalPersistence);
-                const provider = new GoogleAuthProvider();
-                await signInWithPopup(auth, provider);
-                router.push('/game');
-              } catch (e) {
-                console.error('Google sign-in failed', e);
-              }
-            }}
-            className="px-12 py-5 rounded-full bg-gradient-to-r from-[oklch(0.398_0.07_227.392)] via-[oklch(0.828_0.189_84.429)] to-[oklch(0.769_0.188_70.08)] text-white text-xl font-extrabold shadow-2xl hover:shadow-[0_0_64px_oklch(0.398_0.07_227.392_0.7)] transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-primary/60 border-2 border-white/10 backdrop-blur-md font-montserrat tracking-wide animate-glow"
-            aria-label={user ? 'Play Now' : 'Continue with Google'}
-          >
-            {user ? 'Play Now' : 'Continue with Google'}
-          </button>
+          {authLoading ? (
+            <div aria-hidden className="px-12 py-5 rounded-full bg-white/5 border-2 border-white/10 backdrop-blur-md relative overflow-hidden w-[220px] h-[70px] flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-[shimmer_1.4s_infinite]" style={{ backgroundSize: '300% 100%' }} />
+              <span className="text-white/40 font-semibold tracking-wide text-sm">Loading...</span>
+            </div>
+          ) : (
+            <button
+              onClick={async () => {
+                if (user) {
+                  router.push('/game');
+                  return;
+                }
+                try {
+                  await setPersistence(auth, browserLocalPersistence);
+                  const provider = new GoogleAuthProvider();
+                  await signInWithPopup(auth, provider);
+                  router.push('/game');
+                } catch (e) {
+                  console.error('Google sign-in failed', e);
+                }
+              }}
+              className="px-12 py-5 rounded-full bg-gradient-to-r from-[oklch(0.398_0.07_227.392)] via-[oklch(0.828_0.189_84.429)] to-[oklch(0.769_0.188_70.08)] text-white text-xl font-extrabold shadow-2xl hover:shadow-[0_0_64px_oklch(0.398_0.07_227.392_0.7)] transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-primary/60 border-2 border-white/10 backdrop-blur-md font-montserrat tracking-wide animate-glow disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label={user ? 'Play Now' : 'Continue with Google'}
+              disabled={authLoading}
+            >
+              {user ? 'Play Now' : 'Continue with Google'}
+            </button>
+          )}
           <button
             onClick={() => router.push('/game')}
             className="px-8 py-5 rounded-full bg-white/10 text-white text-lg font-bold border border-white/15 hover:bg-white/15 transition-all focus:outline-none focus:ring-4 focus:ring-white/30"
@@ -198,50 +249,43 @@ export default function Home() {
       </motion.div>
 
 
-      {/* Features Section - Staggered, richer text, Lucide icons, improved spacing */}
-      <motion.section id="features"
-        className="mt-4 md:mt-10 max-w-5xl w-full z-20"
-        initial="hidden"
-        animate="visible"
-        variants={{ visible: { transition: { staggerChildren: 0.18 } } }}
-      >
-        <ul className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 text-center">
-          <motion.li
-            className="rounded-2xl bg-card/80 dark:bg-card/30 p-8 shadow-2xl border border-border backdrop-blur-2xl hover:scale-105 hover:shadow-[0_0_48px_oklch(0.398_0.07_227.392_0.3)] transition-transform duration-300 flex flex-col items-center min-h-[260px]"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 2.1, duration: 0.7 }}
-          >
-            <LayoutDashboard size={40} className="text-primary mb-3" />
-            <h3 className="mt-1 text-xl font-bold font-montserrat">Minimal, Intuitive UI</h3>
-            <p className="text-muted-foreground text-base mt-3">A distraction-free interface that lets you focus on the game. Every detail is designed for clarity, beauty, and flow.</p>
-          </motion.li>
-          <motion.li
-            className="rounded-2xl bg-card/80 dark:bg-card/30 p-8 shadow-2xl border border-border backdrop-blur-2xl hover:scale-105 hover:shadow-[0_0_48px_oklch(0.828_0.189_84.429_0.3)] transition-transform duration-300 flex flex-col items-center min-h-[260px]"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 2.3, duration: 0.7 }}
-          >
-            <Sparkles size={40} className="text-primary mb-3" />
-            <h3 className="mt-1 text-xl font-bold font-montserrat">Dynamic Animations</h3>
-            <p className="text-muted-foreground text-base mt-3">Every shot, transition, and interaction is brought to life with smooth, playful motion and subtle feedback.</p>
-          </motion.li>
-          <motion.li
-            className="rounded-2xl bg-card/80 dark:bg-card/30 p-8 shadow-2xl border border-border backdrop-blur-2xl hover:scale-105 hover:shadow-[0_0_48px_oklch(0.769_0.188_70.08_0.3)] transition-transform duration-300 flex flex-col items-center min-h-[260px]"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 2.5, duration: 0.7 }}
-          >
-            <MoonStar size={40} className="text-primary mb-3" />
-            <h3 className="mt-1 text-xl font-bold font-montserrat">Immersive Dark Mode</h3>
-            <p className="text-muted-foreground text-base mt-3">A rich, modern palette that’s easy on the eyes—perfect for late-night sessions and deep focus.</p>
-          </motion.li>
+      {/* Refined Feature Grid */}
+      <section id="features" className="mt-4 md:mt-14 max-w-6xl w-full z-20" aria-labelledby="features-heading">
+        <InViewFade y={50} className="text-center mb-10">
+          <h2 id="features-heading" className="text-3xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-[oklch(0.398_0.07_227.392)] via-[oklch(0.828_0.189_84.429)] to-[oklch(0.769_0.188_70.08)] bg-clip-text text-transparent font-montserrat">Designed For Flow, Built For Precision</h2>
+          <p className="text-white/70 max-w-3xl mx-auto mt-4 text-sm md:text-base">Interface, aim feedback and physics are implemented to prioritize clarity, predictable response and low visual noise.</p>
+        </InViewFade>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7 md:gap-10" role="list">
+          <InViewFade className="rounded-2xl bg-card/80 dark:bg-card/30 p-7 shadow-2xl border border-border backdrop-blur-2xl interactive-tilt hover:shadow-[0_0_42px_oklch(0.398_0.07_227.392_0.35)] flex flex-col min-h-[230px]" delay={0.04}>
+            <div className="flex items-center gap-3 mb-2"><LayoutDashboard size={34} className="text-primary" /><h3 className="text-lg font-bold font-montserrat">Minimal, Intuitive UI</h3></div>
+            <p className="text-muted-foreground text-sm leading-relaxed">A distraction-free interface that keeps focus where it belongs—on angle, velocity, and prediction.</p>
+          </InViewFade>
+          <InViewFade className="rounded-2xl bg-card/80 dark:bg-card/30 p-7 shadow-2xl border border-border backdrop-blur-2xl interactive-tilt hover:shadow-[0_0_42px_oklch(0.828_0.189_84.429_0.35)] flex flex-col min-h-[230px]" delay={0.08}>
+            <div className="flex items-center gap-3 mb-2"><Sparkles size={34} className="text-primary" /><h3 className="text-lg font-bold font-montserrat">Playful Motion</h3></div>
+            <p className="text-muted-foreground text-sm leading-relaxed">Motion is limited to indicate change (shots, focus, reveal) while minimizing distraction.</p>
+          </InViewFade>
+          <InViewFade className="rounded-2xl bg-card/80 dark:bg-card/30 p-7 shadow-2xl border border-border backdrop-blur-2xl interactive-tilt hover:shadow-[0_0_42px_oklch(0.769_0.188_70.08_0.35)] flex flex-col min-h-[230px]" delay={0.12}>
+            <div className="flex items-center gap-3 mb-2"><MoonStar size={34} className="text-primary" /><h3 className="text-lg font-bold font-montserrat">Immersive Dark Palette</h3></div>
+            <p className="text-muted-foreground text-sm leading-relaxed">Layering and contrast choices aim for readability in a dark environment.</p>
+          </InViewFade>
+          <InViewFade className="rounded-2xl bg-card/80 dark:bg-card/30 p-7 shadow-2xl border border-border backdrop-blur-2xl interactive-tilt hover:shadow-[0_0_42px_oklch(0.828_0.189_84.429_0.35)] flex flex-col min-h-[230px]" delay={0.16}>
+            <div className="flex items-center gap-3 mb-2"><Target size={34} className="text-primary" /><h3 className="text-lg font-bold font-montserrat">Predictive Aim Assist</h3></div>
+            <p className="text-muted-foreground text-sm leading-relaxed">Trajectory dots and power gradient provide approximate guidance without automating play.</p>
+          </InViewFade>
+          <InViewFade className="rounded-2xl bg-card/80 dark:bg-card/30 p-7 shadow-2xl border border-border backdrop-blur-2xl interactive-tilt hover:shadow-[0_0_42px_oklch(0.398_0.07_227.392_0.35)] flex flex-col min-h-[230px]" delay={0.20}>
+            <div className="flex items-center gap-3 mb-2"><Gauge size={34} className="text-primary" /><h3 className="text-lg font-bold font-montserrat">Responsive Physics</h3></div>
+            <p className="text-muted-foreground text-sm leading-relaxed">Friction, restitution and damping values are set for predictable rebounds.</p>
+          </InViewFade>
+          <InViewFade className="rounded-2xl bg-card/80 dark:bg-card/30 p-7 shadow-2xl border border-border backdrop-blur-2xl interactive-tilt hover:shadow-[0_0_42px_oklch(0.769_0.188_70.08_0.35)] flex flex-col min-h-[230px]" delay={0.24}>
+            <div className="flex items-center gap-3 mb-2"><Globe2 size={34} className="text-primary" /><h3 className="text-lg font-bold font-montserrat">Global Progression</h3></div>
+            <p className="text-muted-foreground text-sm leading-relaxed">Best scores persist per level after sign‑in; updates only occur on improvement.</p>
+          </InViewFade>
         </ul>
-      </motion.section>
+      </section>
 
   {/* Quick How-to-Play and Controls */}
   <section id="how" className="mt-16 w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 z-20">
-        <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-2xl">
+        <InViewFade className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-2xl" y={48}>
           <h3 className="text-xl font-bold text-white mb-3">How to Play</h3>
           <ol className="list-decimal list-inside text-white/85 space-y-2">
             <li>Aim: Click and drag from the ball to set direction and power.</li>
@@ -249,8 +293,8 @@ export default function Home() {
             <li>Sink it: Get the ball into the hole in as few strokes as possible.</li>
             <li>Advance: Levels progress automatically; your best scores are saved.</li>
           </ol>
-        </div>
-        <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-2xl">
+        </InViewFade>
+        <InViewFade className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-2xl" y={48} delay={0.15}>
           <h3 className="text-xl font-bold text-white mb-3">Controls & Tips</h3>
           <ul className="list-disc list-inside text-white/85 space-y-2">
             <li>Drag farther for more power. The power bar shows your strength.</li>
@@ -258,51 +302,113 @@ export default function Home() {
             <li>Bounce off walls to line up tricky angles.</li>
             <li>Short, precise shots often beat wild power swings.</li>
           </ul>
-        </div>
+        </InViewFade>
       </section>
 
   {/* Progression / Leaderboard Info */}
   <section id="progress" className="mt-14 w-full max-w-5xl z-20">
-        <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-2xl">
+        <InViewFade className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-2xl" y={56}>
           <h3 className="text-xl font-bold text-white mb-3">Progress & Leaderboards</h3>
           <p className="text-white/85">
             Sign in with Google to save your best scores per level. A global leaderboard showcases the top players—displaying your name and how you scored relative to par.
             Your personal scores update automatically when you beat your best. We store only basic profile info (display name) for rankings.
           </p>
+        </InViewFade>
+      </section>
+
+  {/* Tech / Trust Section */}
+      <section id="tech" className="mt-24 w-full max-w-6xl z-20" aria-labelledby="tech-heading">
+        <InViewFade y={50} className="mb-12 text-center">
+          <h2 id="tech-heading" className="text-3xl md:text-5xl font-extrabold font-montserrat tracking-tight bg-gradient-to-r from-[oklch(0.828_0.189_84.429)] via-[oklch(0.398_0.07_227.392)] to-[oklch(0.769_0.188_70.08)] bg-clip-text text-transparent">Engineered For Reliability & Feel</h2>
+          <p className="mt-4 text-white/70 max-w-3xl mx-auto text-sm md:text-base">Built with Next.js 15, React 19, React Three Fiber and Firebase Auth. Intersection observer and conditional rendering reduce unnecessary work.</p>
+        </InViewFade>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10" role="list">
+          <InViewFade delay={0.05} y={60} className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-xl flex flex-col gap-3 interactive-tilt" once>
+            <div className="flex items-center gap-2"><Cpu className="text-primary" size={26} /><h3 className="font-semibold text-sm">Optimized Rendering</h3></div>
+            <p className="text-white/70 text-xs leading-relaxed">Selective re-renders + GPU-accelerated transforms keep motion fluid even on integrated graphics.</p>
+          </InViewFade>
+          <InViewFade delay={0.10} y={60} className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-xl flex flex-col gap-3 interactive-tilt" once>
+            <div className="flex items-center gap-2"><ShieldCheck className="text-primary" size={26} /><h3 className="font-semibold text-sm">Secure Auth</h3></div>
+            <p className="text-white/70 text-xs leading-relaxed">Firebase Auth with least-privilege access + minimal profile storage for leaderboards only.</p>
+          </InViewFade>
+          <InViewFade delay={0.15} y={60} className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-xl flex flex-col gap-3 interactive-tilt" once>
+            <div className="flex items-center gap-2"><Gauge className="text-primary" size={26} /><h3 className="font-semibold text-sm">Physics Tuned</h3></div>
+            <p className="text-white/70 text-xs leading-relaxed">Shot feel emerges from calibrated drag, restitution, and velocity clamps—consistency breeds mastery.</p>
+          </InViewFade>
+          <InViewFade delay={0.20} y={60} className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl p-6 shadow-xl flex flex-col gap-3 interactive-tilt" once>
+            <div className="flex items-center gap-2"><Globe2 className="text-primary" size={26} /><h3 className="font-semibold text-sm">Scalable Stack</h3></div>
+            <p className="text-white/70 text-xs leading-relaxed">Next.js 15 + R3F + serverless endpoints provide a portable, extensible foundation.</p>
+          </InViewFade>
+        </div>
+        <InViewFade y={40} className="flex flex-wrap gap-2 items-center text-[10px] md:text-xs text-white/70">
+          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">Next.js 15</span>
+          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">React 19</span>
+          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">React Three Fiber</span>
+          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">Three.js</span>
+          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">Framer Motion</span>
+          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">Firebase</span>
+          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">Serverless API</span>
+          <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10">WebGL 2</span>
+        </InViewFade>
+      </section>
+
+  {/* Design Principles (Factual replacement for testimonials) */}
+      <section id="principles" className="mt-20 w-full max-w-5xl z-20" aria-labelledby="principles-heading">
+        <InViewFade y={56} className="mb-10 text-center">
+          <h3 id="principles-heading" className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-[oklch(0.828_0.189_84.429)] via-[oklch(0.398_0.07_227.392)] to-[oklch(0.769_0.188_70.08)] bg-clip-text text-transparent tracking-tight font-montserrat">Design Principles</h3>
+          <p className="mt-3 text-white/70 max-w-2xl mx-auto text-sm md:text-base">Grounded, implementation-backed principles guiding GlideShot. No fabricated testimonials or metrics—only what exists now.</p>
+        </InViewFade>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6" role="list" aria-label="Design principles">
+          <InViewFade y={60} delay={0.05} className="rounded-xl bg-white/5 border border-white/10 p-6 backdrop-blur-xl shadow-xl flex flex-col gap-3 interactive-tilt" once>
+            <h4 className="text-white font-semibold text-sm tracking-wide">Readable Feedback</h4>
+            <p className="text-white/70 text-xs leading-relaxed">Aim line, trajectory markers, and power bar update only while interacting—avoiding animation noise during idle play.</p>
+          </InViewFade>
+          <InViewFade y={60} delay={0.10} className="rounded-xl bg-white/5 border border-white/10 p-6 backdrop-blur-xl shadow-xl flex flex-col gap-3 interactive-tilt" once>
+            <h4 className="text-white font-semibold text-sm tracking-wide">Performance First</h4>
+            <p className="text-white/70 text-xs leading-relaxed">GPU-friendly transforms, conditional rendering, and intersection-based reveal limit main thread work.</p>
+          </InViewFade>
+          <InViewFade y={60} delay={0.15} className="rounded-xl bg-white/5 border border-white/10 p-6 backdrop-blur-xl shadow-xl flex flex-col gap-3 interactive-tilt" once>
+            <h4 className="text-white font-semibold text-sm tracking-wide">No Artificial Waiting</h4>
+            <p className="text-white/70 text-xs leading-relaxed">Auth button uses a skeleton only during actual Firebase state resolution—no fake loading timers.</p>
+          </InViewFade>
+          <InViewFade y={60} delay={0.20} className="rounded-xl bg-white/5 border border-white/10 p-6 backdrop-blur-xl shadow-xl flex flex-col gap-3 interactive-tilt" once>
+            <h4 className="text-white font-semibold text-sm tracking-wide">Honest Copy</h4>
+            <p className="text-white/70 text-xs leading-relaxed">Removed unverifiable quotes & numbers; what you see reflects features present in the current build.</p>
+          </InViewFade>
         </div>
       </section>
 
-  {/* Tech stack / badges */}
-  <section className="mt-10 w-full max-w-5xl z-20">
-        <div className="flex flex-wrap gap-2 items-center text-xs text-white/80">
-          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10">Next.js 15</span>
-          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10">React 19</span>
-          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10">React Three Fiber</span>
-          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10">Three.js</span>
-          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10">Firebase Auth</span>
-          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10">Serverless API</span>
-        </div>
-      </section>
+    {/**
+     * Future: Real usage stats (do not fabricate)
+     * Example implementation sketch (once an endpoint exists):
+     *
+     * const { data, error } = useSWR('/api/stats', fetcher);
+     * if (error) // fallback to hiding the section
+     * if (!data) // show skeleton
+     * Render: totalShots, totalSessions, levelsAvailable, distinctUsers
+     *
+     * This placeholder is intentionally not shown until real backend metrics are provided.
+     */}
 
   {/* FAQ */}
   <section id="faq" className="mt-14 w-full max-w-5xl z-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="rounded-xl bg-white/5 border border-white/10 p-5 backdrop-blur-xl">
+          <InViewFade className="rounded-xl bg-white/5 border border-white/10 p-5 backdrop-blur-xl" y={60}>
             <h4 className="text-white font-semibold mb-2">Can I play without signing in?</h4>
             <p className="text-white/80 text-sm">Yes, hit “Try demo.” To appear on the leaderboard and save progress, continue with Google.</p>
-          </div>
-          <div className="rounded-xl bg-white/5 border border-white/10 p-5 backdrop-blur-xl">
+          </InViewFade>
+          <InViewFade className="rounded-xl bg-white/5 border border-white/10 p-5 backdrop-blur-xl" y={60} delay={0.1}>
             <h4 className="text-white font-semibold mb-2">Is it mobile-friendly?</h4>
             <p className="text-white/80 text-sm">The interface is touch-friendly and responsive. For the best experience, try landscape mode.</p>
-          </div>
-          <div className="rounded-xl bg-white/5 border border-white/10 p-5 backdrop-blur-xl">
+          </InViewFade>
+          <InViewFade className="rounded-xl bg-white/5 border border-white/10 p-5 backdrop-blur-xl" y={60} delay={0.2}>
             <h4 className="text-white font-semibold mb-2">What data do you store?</h4>
             <p className="text-white/80 text-sm">Only your display name and best scores per level for ranking. Admin credentials stay server-side.</p>
-          </div>
-          <div className="rounded-xl bg-white/5 border border-white/10 p-5 backdrop-blur-xl">
+          </InViewFade>
+          <InViewFade className="rounded-xl bg-white/5 border border-white/10 p-5 backdrop-blur-xl" y={60} delay={0.3}>
             <h4 className="text-white font-semibold mb-2">Will there be more levels?</h4>
             <p className="text-white/80 text-sm">Yes—new courses and obstacles are on the roadmap. Feedback is welcome on GitHub.</p>
-          </div>
+          </InViewFade>
         </div>
       </section>
 
@@ -347,6 +453,40 @@ export default function Home() {
           </motion.div>
         </div>
       </footer>
+      {/* Floating Action Buttons */}
+      {showFab && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3" role="complementary" aria-label="Quick actions">
+          <motion.button
+            initial={{ opacity: 0, scale: 0.6, y: 20 }}
+            animate={{ opacity: showTopBtn ? 1 : 0, scale: showTopBtn ? 1 : 0.6, y: showTopBtn ? 0 : 20 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+            onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className="w-10 h-10 rounded-full bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40 interactive-tilt"
+            aria-label="Scroll to top"
+          >
+            <ArrowUp size={18} />
+          </motion.button>
+          <motion.button
+            initial={{ opacity: 0, scale: 0.6, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 22, delay: 0.05 }}
+            onClick={async () => {
+              if (user) { router.push('/game'); return; }
+              try {
+                await setPersistence(auth, browserLocalPersistence);
+                const provider = new GoogleAuthProvider();
+                await signInWithPopup(auth, provider);
+                router.push('/game');
+              } catch (e) { console.error('Google sign-in failed', e); }
+            }}
+            className="group px-5 h-12 rounded-full bg-gradient-to-r from-[oklch(0.398_0.07_227.392)] via-[oklch(0.828_0.189_84.429)] to-[oklch(0.769_0.188_70.08)] text-white font-semibold shadow-xl border border-white/10 backdrop-blur-md flex items-center gap-2 hover:shadow-[0_0_40px_oklch(0.398_0.07_227.392_0.55)] focus:outline-none focus:ring-2 focus:ring-primary/60 interactive-tilt"
+            aria-label={user ? 'Play now' : 'Sign in with Google'}
+          >
+            {user ? <Play size={18} /> : <LogIn size={18} />}
+            <span className="text-sm font-montserrat">{user ? 'Play' : 'Sign In'}</span>
+          </motion.button>
+        </div>
+      )}
     </main>
   );
 }

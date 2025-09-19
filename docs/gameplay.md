@@ -1,30 +1,54 @@
 # Gameplay & Mechanics
 
+This document reflects only the currently implemented mechanics.
+
 ## Core Loop
-- Aim → Set Power → Shoot → Ball Physics → Goal Detection → Next Stroke/Level
 
-## Controls
-- **Aiming:** Drag mouse or use keyboard to set direction
-- **Power:** Click/drag or hold/release to set shot strength
-- **Camera:** Orbit, pan, zoom (mouse/touch/keyboard)
-- **UI:** HUD shows hole, par, strokes, power bar, aiming arrow
+Aim (drag) → Release (apply velocity) → Ball updates under damping & boundary collisions → Hole detection → Score save → Next level after delay.
 
-## Physics
-- Ball velocity, friction, and deceleration
-- Collision with course boundaries and obstacles
-- Goal detection (ball in hole)
-- Optional: spin, bounce, wind effects
+## Controls (Implemented)
 
-## Levels
-- At least 3 levels, each with unique layout and terrain
-- Level configs define start, hole, obstacles, par
+| Action | Method |
+|--------|--------|
+| Aim & Power | Mouse drag from ball (drag distance capped) |
+| Shoot | Release pointer while dragging |
+| Camera | Automatic follow (no manual orbit UI) |
 
-## Progression
-- Stroke count tracked per hole
-- Score persists across levels and sessions
-- Leaderboard for best scores
+Keyboard, touch gestures, replay triggers, and advanced camera control are not implemented yet.
 
-## Bonus Features
-- Cinematic replay, daily challenge, unlockables, friend challenges, etc.
+## UI Elements
 
-See `ui.md`, `physics.md`, and `backend.md` for more details.
+| Element | Purpose |
+|---------|---------|
+| HUD | Displays strokes, par, relative score, power bar |
+| Aim Assist | Direction line + glow, ghost ball, predictive dots; active while dragging |
+| Leaderboard | Per‑level top entries (score + relative vs par) |
+| Notice | Hole completion message (temporary) |
+
+## Level Progression
+
+Levels are loaded sequentially from an internal list of three JSON configs. After scoring a hole, the next level index is selected modulo length. No manual selection UI exists.
+
+## Scoring
+
+* Stroke count increments each shot.
+* On goal: final strokes (including current shot) submitted with par.
+* Relative score (strokes − par) displayed in HUD.
+
+## Physics Snapshot
+
+* Frame‑rate independent damping via exponential factor.
+* Boundary collision inverts velocity component with 0.8 restitution.
+* Hole detection: distance threshold + low speed gate.
+* No slope/terrain variation, obstacles, spin, or wind currently active.
+
+## Audio & Feedback
+
+* Web Audio beeps for shot, stop, and success triple‑tone.
+* Particles & ring pulse for bounce/goal events.
+
+## Not Implemented (Explicitly)
+
+Replay camera, obstacle interactions beyond walls, advanced power curve UI, mobile haptics, achievements, daily challenges, keyboard accessibility enhancements.
+
+See `physics.md` for lower‑level motion details, `backend.md` for scoring persistence, and `ui.md` for HUD specifics.

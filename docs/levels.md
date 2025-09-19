@@ -1,38 +1,52 @@
-# GlideShot Level Design & Extensibility
+# Levels
 
-## Level Structure
+Only three JSON-defined levels ship with the current codebase. Geometry in-game is procedural (no external model loading yet).
 
-- Each level is defined by a 3D model (OBJ/GLTF) and a config file (JSON/TS)
-- Config includes:
-  - Start position
-  - Hole position/size
-  - Par value
-  - Obstacles (static/dynamic)
-  - Terrain properties (friction, slope, etc.)
+## Current Level Files
 
-## Adding New Levels
+| File | Name | Par | Hole | Notes |
+|------|------|-----|------|-------|
+| `level-1.json` | Classic Starter | 3 | (0, -10) | Straight fairway |
+| `level-2.json` | Gentle Challenge | 3 | (~2, -9) | Slight lateral offset hole |
+| `level-3.json` | Modern Maze | 4 | (~-2, -8) | Simple zig-zag path intention (currently flat) |
 
-1. Place model in `public/levels/` (e.g., `level-1.glb`)
-2. Create config in `public/levels/level-1.json`
-3. Update level list in game logic (or use auto-discovery)
+Each config format:
 
-## Terrain Variations
+```jsonc
+{
+  "name": "Classic Starter",
+  "description": "Straight fairway with a single hole.",
+  "model": "",          // placeholder, unused
+  "start": [0, 0.2, 10],
+  "hole": [0, 0.01, -10],
+  "par": 3,
+  "obstacles": []        // not consumed yet
+}
+```
 
-- Ramps, slopes, curves, moving platforms
-- Define via model geometry and config
+## How They Load
 
-## Dynamic Obstacles
+`game/page.tsx` contains a static array of filenames: `['level-1.json','level-2.json','level-3.json']`. On mount it fetches each, stores parsed config, sets initial ball position & hole vector.
 
-- Specify movement path, speed, and trigger in config
-- Supported types: rotating, sliding, toggling
+## In-Scene Representation
 
-## Level Progression
+`Level.tsx` generates:
 
-- Levels can be played linearly or via selector
-- Progress and scores tracked per level
+* Ground plane (20 × 30)
+* Four perimeter walls
+* Hole (ring + cylinder + glowing outer ring)
+* Flag pole + flag mesh
 
-## Bonus: Daily/Randomized Levels
+No per-level geometry variation occurs beyond hole position & par values.
 
-- Generate or select a new challenge each day
+## Adding a New Level (Current Process)
 
-See `gameplay.md` and `ui.md` for how levels integrate with the game loop and UI.
+1. Create `public/levels/level-4.json` with same schema.
+2. Add filename to the `files` array in the effect inside `game/page.tsx`.
+3. (Optional) Adjust hole coordinates to remain within ground bounds.
+
+## Not Implemented
+
+Auto-discovery of JSON files, loading GLTF/OBJ meshes, dynamic obstacles, ramps/slopes, daily/random level rotation, par-based difficulty scaling.
+
+See `gameplay.md` for progression details.

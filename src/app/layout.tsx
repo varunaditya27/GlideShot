@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 
@@ -28,8 +28,6 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: { icon: "/favicon.ico" },
   applicationName: "GlideShot",
-  themeColor: "#0d0f14",
-  viewport: { width: "device-width", initialScale: 1, viewportFit: "cover" },
   openGraph: {
     title: "GlideShot – Precision Mini-Golf in Motion",
     description: "Refined 3D mini-golf with beautiful motion, glass UI, and leaderboard progression.",
@@ -41,6 +39,13 @@ export const metadata: Metadata = {
     title: "GlideShot – Precision Mini-Golf",
     description: "Refined 3D mini-golf with beautiful motion, glass UI, and leaderboard progression."
   }
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0d0f14",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover"
 };
 
 export default function RootLayout({

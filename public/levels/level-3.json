@@ -1,9 +1,17 @@
 {
-  "name": "Modern Maze",
-  "description": "Simple zig-zag path.",
-  "model": "",
-  "start": [0, 0.2, 10],
-  "hole": [-2, 0.01, -8],
-  "par": 4,
-  "obstacles": []
+  "name": "The Gauntlet",
+  "par": 5,
+  "start": [8, 0.2, 12],
+  "hole": [-8, 0.01, -12],
+  "slopes": [
+    { "vertices": [ [6, 0, 10], [10, 0, 10], [8, 1, 4] ] },
+    { "vertices": [ [6, 0, -8], [10, 0, -8], [8, 1, -4] ] }
+  ],
+  "movingObstacles": [
+    {
+      "shape": "box", "size": [4, 0.5, 4],
+      "path": [ [0, 0.2, 2], [0, 0.2, -2] ],
+      "speed": 3, "mode": "ping-pong"
+    }
+  ]
 }

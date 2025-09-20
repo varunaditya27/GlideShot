@@ -47,9 +47,10 @@ export default function Home() {
     };
   }
 
-  const particles = React.useMemo(() => {
+  interface Particle { left: string; top: string; size: number; delay: number; opacity: number; }
+  const particles = React.useMemo<Particle[]>(() => {
     const rand = mulberry32(0xDEADBEEF);
-    return Array.from({ length: 36 }).map(() => ({
+    return Array.from({ length: 36 }).map<Particle>(() => ({
       left: `${rand() * 100}%`,
       top: `${rand() * 100}%`,
       size: rand() * 2 + 1,
@@ -67,8 +68,8 @@ export default function Home() {
       if (!ref.current) return;
       if (prefersReducedMotion) { setVisible(true); return; }
       const el = ref.current;
-      const obs = new IntersectionObserver((entries) => {
-        entries.forEach(e => {
+      const obs = new IntersectionObserver((entries: IntersectionObserverEntry[]) => {
+        entries.forEach((e: IntersectionObserverEntry) => {
           if (e.isIntersecting) {
             setVisible(true);
             if (once) obs.disconnect();

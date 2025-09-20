@@ -6,9 +6,11 @@ interface HUDProps {
   strokes: number;
   par: number;
   power?: number; // optional aiming power 0..5
+  onReplay: () => void;
+  canReplay: boolean;
 }
 
-export default function HUD({ strokes, par, power = 0 }: HUDProps) {
+export default function HUD({ strokes, par, power = 0, onReplay, canReplay }: HUDProps) {
   const relative = strokes - par; // could be negative / zero / positive
   const relLabel = relative === 0 ? 'E' : (relative > 0 ? `+${relative}` : `${relative}`);
   const relColor = relative === 0 ? '#e2e8f0' : (relative > 0 ? '#ef4444' : '#22c55e');
@@ -28,7 +30,6 @@ export default function HUD({ strokes, par, power = 0 }: HUDProps) {
     fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
     fontSize: 15,
     lineHeight: 1.25,
-    pointerEvents: 'none',
     minWidth: 240,
   };
 
@@ -67,6 +68,19 @@ export default function HUD({ strokes, par, power = 0 }: HUDProps) {
     <div key={i} style={{ width: 1, height: '100%', background: 'rgba(255,255,255,0.22)', opacity: i === 0 || i === 5 ? 0.35 : 0.18 }} />
   ));
 
+  const replayBtn: React.CSSProperties = {
+    pointerEvents: 'auto',
+    background: 'rgba(255,255,255,0.1)',
+    border: '1px solid rgba(255,255,255,0.15)',
+    color: 'white',
+    padding: '8px 14px',
+    borderRadius: 99,
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'background-color 150ms, transform 150ms',
+  };
+
   return (
     <div style={card} aria-label={`Score card: strokes ${strokes}, par ${par}, relative ${relLabel}`}>
       <div style={{ display: 'flex', gap: 22, alignItems: 'flex-end' }}>
@@ -82,6 +96,15 @@ export default function HUD({ strokes, par, power = 0 }: HUDProps) {
           <div style={label}>Relative</div>
           <div style={{ ...number, fontSize: 22, color: relColor }}>{relLabel}</div>
         </div>
+        <button
+          onClick={onReplay}
+          disabled={!canReplay}
+          style={{ ...replayBtn, opacity: canReplay ? 1 : 0.4, cursor: canReplay ? 'pointer' : 'not-allowed' }}
+          onMouseOver={e => canReplay ? (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)') : null}
+          onMouseOut={e => canReplay ? (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)') : null}
+        >
+          Replay
+        </button>
       </div>
       <div style={{ marginTop: 6, fontSize: 11, opacity: 0.55, letterSpacing: 0.5 }}>Drag from ball to aim – release to shoot</div>
       <div style={barOuter} aria-label={`Power ${(Math.min(power, 5) / 5 * 100).toFixed(0)} percent`}>

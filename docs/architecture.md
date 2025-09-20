@@ -16,8 +16,8 @@ This document describes only what exists in the current GlideShot codebase.
 
 ## Module Overview
 
-* `game/page.tsx`: Orchestrates game loop composition (HUD, Canvas, leaderboard, level progression).
-* `components/game/*`: Rendering units (Ball, Level, PlayerControls, CameraRig, AimAssist) + visual effects (particles, hole pulse).
+* `game/page.tsx`: Orchestrates game loop composition (HUD, Canvas, leaderboard, level progression, rest detection thresholds).
+* `components/game/*`: Rendering units (Ball, Level, PlayerControls, CameraRig, enhanced AimAssist) + visual effects (particles, hole pulse).
 * `components/ui/*`: HUD and Leaderboard.
 * `lib/firebaseConfig.ts`: Client Firebase initialization using `NEXT_PUBLIC_*` env vars.
 * `lib/firebaseAdmin.ts`: Lazy Admin SDK init for server routes (warns if not fully configured).
@@ -26,7 +26,7 @@ This document describes only what exists in the current GlideShot codebase.
 ## Data / Control Flow
 
 1. Player aims (pointer events captured by `PlayerControls`).
-2. On release, velocity vector applied to ball refs; `GameScene` advances physics each frame.
+2. On release (or keyboard trigger), velocity vector applied to ball refs; `GameScene` advances physics only while moving (hysteresis-driven state machine).
 3. Hole detection triggers score submission via `saveScore` (client) → `/api/scores/post` (server) → Firestore.
 4. Leaderboard fetch on level load calls `/api/scores/get?levelId=...`.
 5. Auth hook listens to Firebase Auth state; authenticated user id passed with score submissions.
@@ -34,10 +34,12 @@ This document describes only what exists in the current GlideShot codebase.
 ## Physics Loop (Simplified)
 
 ```text
-v *= dampingFactor (frame‑rate independent)
-pos += v * dt
-if boundary hit -> invert component * 0.8
-if near hole && speed < threshold -> goal
+if moving:
+  v *= dampingFactor (frame‑rate independent)
+  pos += v * dt
+  if boundary hit -> invert component * 0.8
+  if near hole && speed < threshold -> goal
+  if speed² < stopThreshold for N frames OR speed² < hardSnap OR elapsed > maxMoveTime -> moving=false
 ```
 
 ## Firestore Collections

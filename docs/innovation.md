@@ -6,11 +6,11 @@ This document separates what exists now from ideas explicitly not implemented. I
  
 | Area | Implemented |
 |------|-------------|
-| Core Gameplay | Drag to aim/shoot, 3 custom physics levels |
+| Core Gameplay | Drag & optional keyboard aim (toggle 'K'), 3 custom physics levels |
 | Scoring | Stroke counting, per-level par, relative score |
 | Persistence | Score + leaderboard Firestore writes |
 | Auth | Firebase email/password |
-| Visual Feedback | Aim assist, particles (bounce/goal), hole pulse |
+| Visual Feedback | Advanced aim assist (curved trail, Fresnel ghost, power ring, ticks), particles (bounce/goal), hole pulse |
 | Audio | Minimal Web Audio beeps |
 | UI | HUD, leaderboard, notice overlay |
 
@@ -23,7 +23,8 @@ This document separates what exists now from ideas explicitly not implemented. I
 | UX | Level selector screen | Manual replay & practice |
 | Feedback | Replay last shot camera | Skill learning tool |
 | Progression | Additional level set | Content longevity |
-| Accessibility | Keyboard-only aim mode | Inclusive input |
+| Accessibility | Expanded keyboard aim refinements (power curve presets) | Fine-tune non-mouse control |
+| UX | Rest detection tuning overlay | Expose thresholds for accessibility/feel |
 | Performance | Dynamic resolution scaling | Better low-end FPS |
 
 ## Longer-Term Concepts (Not Implemented)

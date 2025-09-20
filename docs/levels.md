@@ -39,6 +39,8 @@ Each config format:
 
 No per-level geometry variation occurs beyond hole position & par values.
 
+Rest detection thresholds and aim assist visuals are global systems and do not alter the JSON level schema; adding levels requires no changes to those mechanics.
+
 ## Adding a New Level (Current Process)
 
 1. Create `public/levels/level-4.json` with same schema.

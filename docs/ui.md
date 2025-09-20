@@ -11,9 +11,19 @@ This covers the currently implemented interface pieces only.
 
 ## Aim Assist
 
-* Active while dragging.
-* Components: direction line (sharp + glow), predictive decay dots, ghost ball, dynamic color scaling by normalized power.
-* All geometry & materials reused (allocation minimization).
+Active while aiming (mouse drag with pointer capture or keyboard aim mode). Components:
+
+| Component | Description |
+|-----------|-------------|
+| Curved Trail | Vertex‑colored multi‑point line with hue shift & glow duplicate |
+| Ghost Endpoint | Pulsing Fresnel shader sphere at projected max distance |
+| Power Ring | Ground ring with arc fill proportional to normalized power |
+| Distance Ticks | Fading ring markers at fixed spacing along aim direction |
+| Decay Dots | Ground dots with geometric distance falloff & opacity taper |
+| Color Dynamics | Green→yellow→red + subtle hue shift across trail length |
+| Smoothed Power | Lerp filter prevents harsh visual snapping during fast drag |
+
+All geometry/material instances are reused; only buffer attributes and uniforms are mutated per frame (allocation minimization).
 
 ## Leaderboard Panel
 

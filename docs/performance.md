@@ -15,6 +15,9 @@ This file documents only optimizations that actually exist in the current codeba
 |------|----------|-------|
 | Physics Loop | Fixed-step integration decoupled from render | Prevents variable step instability on slow frames. |
 | Math Objects | Reused Vector objects in update logic | Reduces per-frame allocations & GC pressure. |
+| Aim Assist Trail | Single buffer geometry + in-place vertex color updates | Prevents per-frame object churn. |
+| Fresnel Ghost | Reused shader material with uniform updates only | Minimal shader compilation overhead. |
+| Power Ring & Ticks | Reused ring/dot meshes; drawRange adjusted | Allocation-free dynamic fill. |
 | Scene Assets | Preloaded static GLTF/geometry once at mount | Avoids runtime fetch + parse mid-session. |
 | React Components | Pure presentational HUD components kept shallow | Minimal prop churn limits re-render cost. |
 | State Management | Local component state + minimal context | Avoids global re-renders. |
@@ -31,9 +34,10 @@ A fixed timestep (e.g., 60 Hz) ensures deterministic motion within tolerance. Re
 
 ## Memory Strategy
 
-- Reuse vectors / temp objects inside the physics loop.
-- Avoid allocating new arrays inside animation callbacks.
+- Reuse vectors / temp objects inside physics and aim assist frame logic.
+- Avoid allocating new arrays inside animation callbacks (vertex color buffer reused).
 - Keep transient effect objects short-lived and sparse.
+- Rest hysteresis prevents unnecessary integration when visually idle, reducing math ops.
 
 ## Avoided Patterns (Deliberately Not Used)
 

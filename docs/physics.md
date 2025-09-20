@@ -11,6 +11,7 @@ Only currently implemented behaviors are described below.
 
 * Position increment: `pos += v * dt` (scalar delta limited to 1/60s max step).
 * No gravity or Y‑axis motion; gameplay is planar (XZ plane), with constant Y offset for the ball.
+* Aim assist arc is purely visual (vertical sine modulation); does not affect physics.
 
 ## Boundary Collisions
 
@@ -25,6 +26,19 @@ Only currently implemented behaviors are described below.
 * Radius check: `distance(ballPos, holePos) < 0.25`.
 * Speed gate: only triggers if `|v| < 1.5` (prevents fast pass‑through registering early).
 * On success: velocity zeroed, stroke counted, score persisted, visual pulse + success tones.
+
+## Rest Detection (Hysteresis)
+
+To avoid premature readiness delays or micro‑drift keeping the ball "moving":
+
+| Threshold | Purpose |
+|-----------|---------|
+| Start speed² > 0.0009 | Enter moving state (prevents false idle) |
+| Stop speed² < 0.00015 (2 frames) | Declare rest (debounce) |
+| Hard snap speed² < 0.00005 | Immediate zero velocity (kill drift) |
+| Max moving time 8s | Failsafe to prevent soft lock |
+
+While moving, only then is physics integration executed; once stopped, velocity is snapped to zero and next shot can start instantly.
 
 ## Visual/Feedback Physics Adjacent Effects
 

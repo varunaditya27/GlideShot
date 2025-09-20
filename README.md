@@ -8,7 +8,7 @@ Refined browser-based 3D mini‑golf built with Next.js, React Three Fiber, and 
 
 ## Overview
 
-GlideShot is a focused, minimal mini‑golf prototype. It implements a small but polished feature set: smooth camera follow, lightweight custom physics, intuitive drag‑to‑aim controls with an optimized aim assist, a concise HUD, and persistent scoring with a per‑level leaderboard backed by Firebase. All documentation below reflects the current codebase only—no hypothetical or unimplemented functionality is described as present.
+GlideShot is a focused, minimal mini‑golf prototype. It implements a small but polished feature set: smooth camera follow, lightweight custom physics, intuitive drag‑to‑aim controls with an advanced, performance‑oriented aim assist (curved multi‑color trail, Fresnel ghost endpoint, power ring, distance ticks, smoothed power), a concise HUD, and persistent scoring with a per‑level leaderboard backed by Firebase. All documentation below reflects the current codebase only—no hypothetical or unimplemented functionality is described as present.
 
 ## Implemented Feature Set
 
@@ -16,9 +16,9 @@ GlideShot is a focused, minimal mini‑golf prototype. It implements a small but
 |------|-------------|
 | Rendering | React Three Fiber + Three.js scene (single procedural course per level) |
 | Levels | 3 JSON‑defined levels (`public/levels/level-1..3.json`) with name, description, start, hole, par |
-| Physics | Custom loop: velocity integration, frame‑rate independent damping, boundary bounce, hole radius detection |
-| Input | Mouse drag to aim + power (no keyboard controls implemented) |
-| Aim Assist | Predictive decay dots, direction line + glow, ghost ball, dynamic color by power |
+| Physics | Custom loop: velocity integration, frame‑rate independent damping, boundary bounce, hysteresis-based rest detection, hole radius detection |
+| Input | Mouse drag to aim + power with pointer capture + global release safety; keyboard toggle aim mode (K) with arrow direction & +/- power |
+| Aim Assist | Curved multi‑color trail + glow, Fresnel pulsing ghost, power ring arc fill, decay dots, distance ticks, hue shift & smoothed power response |
 | UI | HUD (strokes, par, relative score, power bar with ticks), leaderboard panel, hole completion notice |
 | Particles & FX | Bounce burst, goal burst, hole pulse, subtle audio beeps (Web Audio) |
 | Camera | Smooth follow rig with damping offset |
@@ -66,11 +66,12 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY----
 
 ## Gameplay Loop
 
-1. Drag from ball to set direction + power.
-2. Release: shot velocity applied (`power * 2`).
-3. Per‑frame update: velocity damped (`0.98^(dt*60)`), boundary collision flips velocity component *0.8, position advanced.
-4. Hole detection: distance < 0.25 and speed < 1.5 → score saved → transition to next level after delay.
-5. Leaderboard endpoint stores user score (merging strokes + par + timestamp) and updates per‑level entry.
+1. Drag from ball (pointer captured) to set direction + power (distance capped, power smoothed for visuals).
+2. Release (or space in keyboard aim mode): shot velocity applied (`power * 2`).
+3. Physics: integrate, damping (`0.98^(dt*60)`), boundary response (invert component *0.8), update refs only while "moving".
+4. Rest detection: hysteresis thresholds (start > 0.0009, stop < 0.00015, hard snap < 0.00005, 2-frame confirmation) re‑enable next shot promptly.
+5. Hole detection: distance < 0.25 & speed < 1.5 → score saved → transition to next level after delay.
+6. Leaderboard endpoint stores user score (merging strokes + par + timestamp) and updates per‑level entry.
 
 ## Data Model (Firestore)
 
@@ -93,6 +94,7 @@ leaderboard/{levelId}/entries/{uid}
 Each level config (JSON) includes:
 
 ```jsonc
+
 {
 	"name": "Classic Starter",
 	"description": "Straight fairway with a single hole.",
@@ -109,7 +111,8 @@ The in‑scene geometry is procedural (`Level.tsx`)—rectangular ground + bound
 ## Performance Notes
 
 * No physics engine; bespoke minimal math.
-* Predictive aim assist preallocates vectors & meshes; only mutates.
+* Advanced aim assist preallocates geometry & shader materials; only mutates buffers & uniforms (no per‑frame allocations).
+* Vertex-colored trail updates reuse a single Float32 buffer; colors updated in-place.
 * Particle bursts & hole pulse reuse objects; zero per‑frame allocations for geometry.
 * Camera rig smoothing uses simple lerp—no re‑renders triggered by React state per frame.
 * Turbopack build; small dependency surface for 3D (three + R3F + drei subset).

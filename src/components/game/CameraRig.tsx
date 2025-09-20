@@ -29,8 +29,7 @@ export default function CameraRig({
     desired.current.copy(target).add(offset);
     camera.position.copy(desired.current);
     camera.lookAt(target.clone().add(lookOffset));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [target, offset, lookOffset, camera]);
 
   useFrame((_, dt) => {
     const lead = temp.current.copy(velocity).multiplyScalar(0.8); // slight velocity lead

@@ -5,10 +5,15 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { User } from 'firebase/auth';
 import Level from '@/components/game/Level';
+import { updateBall, Slope, MovingObstacleState } from '@/lib/physics';
 import Ball from '@/components/game/Ball';
+import ReplayBall, { PathEntry } from '@/components/game/ReplayBall';
+import MovingObstacle, { MovingObstacleData, MovingObstacleRef } from '@/components/game/MovingObstacle';
 import PlayerControls, { PlayerControlsHandle } from '@/components/game/PlayerControls';
 import AimAssist from '@/components/game/AimAssist';
+import DynamicResolutionHandler from '@/components/game/DynamicResolutionHandler';
 import HUD from '@/components/ui/HUD';
+import LevelSelector from '@/components/ui/LevelSelector';
 import Leaderboard from '@/components/ui/Leaderboard';
 import Auth from '@/components/auth/Auth';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,6 +21,11 @@ import { saveScore } from '@/lib/firestore';
 import CameraRig from '@/components/game/CameraRig';
 
 // This component will live inside the Canvas and handle the game loop
+interface ObstacleInfo {
+  ref: React.RefObject<MovingObstacleRef>;
+  data: MovingObstacleData;
+}
+
 interface GameSceneProps {
   ballPosRef: React.MutableRefObject<THREE.Vector3>;
   ballVelocity: React.MutableRefObject<THREE.Vector3>;
@@ -23,53 +33,46 @@ interface GameSceneProps {
   onGoal: () => void;
   holePosition: THREE.Vector3;
   onBounce?: (pos: THREE.Vector3) => void;
+  slopes: Slope[];
+  obstacles: ObstacleInfo[];
+  pathRecorder: React.MutableRefObject<PathEntry[]>;
 }
 
-function GameScene({ ballPosRef, ballVelocity, onBallStop, onGoal, holePosition, onBounce }: GameSceneProps) {
+function GameScene({ ballPosRef, ballVelocity, onBallStop, onGoal, holePosition, onBounce, slopes, obstacles, pathRecorder }: GameSceneProps) {
   useFrame((state, delta) => {
-    const v = ballVelocity.current;
-    if (v.lengthSq() < 0.001) {
-      if (ballVelocity.current.length() > 0) {
-        v.set(0, 0, 0);
-        onBallStop();
-      }
-      return;
-    }
-    
-    // Improved delta time handling for smoother movement
     const dt = Math.min(delta, 1 / 60);
-    const dampingFactor = Math.pow(0.98, dt * 60); // Frame-rate independent damping
-    
-    // Apply velocity to position
-    const displacement = v.clone().multiplyScalar(dt);
-    const newPosition = ballPosRef.current.clone().add(displacement);
-    
-    // Apply damping
-    v.multiplyScalar(dampingFactor);
 
-    const groundSize = [20, 30];
-    const ballRadius = 0.2;
-    const minX = -groundSize[0] / 2 + ballRadius;
-    const maxX = groundSize[0] / 2 - ballRadius;
-    const minZ = -groundSize[1] / 2 + ballRadius;
-    const maxZ = groundSize[1] / 2 - ballRadius;
+    if (ballVelocity.current.lengthSq() > 0.001) {
+      pathRecorder.current.push({ time: state.clock.elapsedTime, position: ballPosRef.current.clone() });
+      const obstacleStates: MovingObstacleState[] = obstacles.map(info => ({
+        position: info.ref.current?.position || new THREE.Vector3(),
+        velocity: info.ref.current?.velocity || new THREE.Vector3(),
+        size: info.data.size,
+      }));
 
-    if (newPosition.x <= minX || newPosition.x >= maxX) {
-      v.x = -v.x * 0.8;
-      newPosition.x = Math.max(minX, Math.min(newPosition.x, maxX));
-      onBounce?.(newPosition.clone());
-    }
-    if (newPosition.z <= minZ || newPosition.z >= maxZ) {
-      v.z = -v.z * 0.8;
-      newPosition.z = Math.max(minZ, Math.min(newPosition.z, maxZ));
-      onBounce?.(newPosition.clone());
+      const { newState, bounced } = updateBall(
+        { position: ballPosRef.current, velocity: ballVelocity.current },
+        slopes,
+        obstacleStates,
+        dt
+      );
+
+      ballPosRef.current.copy(newState.position);
+      ballVelocity.current.copy(newState.velocity);
+
+      if (bounced) {
+        onBounce?.(ballPosRef.current.clone());
+      }
+    } else {
+      if (ballVelocity.current.length() > 0) {
+          ballVelocity.current.set(0,0,0);
+          onBallStop();
+      }
     }
 
     const holeRadius = 0.25;
-    if (newPosition.distanceTo(holePosition) < holeRadius && v.length() < 1.5) {
+    if (ballPosRef.current.distanceTo(holePosition) < holeRadius && ballVelocity.current.length() < 1.5) {
       onGoal();
-    } else {
-      ballPosRef.current.copy(newPosition);
     }
   });
 
@@ -205,15 +208,19 @@ function ParticlesBurst({ color = '#ffcc00', count = 16, triggerRef }: { color?:
 
 // The actual game content
 function GameContent({ user }: { user: User }) {
+  const [appState, setAppState] = useState<'level-select' | 'playing'>('level-select');
   const [gameState, setGameState] = useState<'ready' | 'shot' | 'holed'>('ready');
   const ballPosition = useRef(new THREE.Vector3(0, 0.2, 10));
   const ballVelocity = useRef(new THREE.Vector3(0, 0, 0));
   const [strokes, setStrokes] = useState(0);
-  const [levelIndex, setLevelIndex] = useState(0);
-  const [levels, setLevels] = useState<Array<{ id: string; name: string; par: number; start: [number, number, number]; hole: [number, number, number] }>>([]);
+  const [levelIndex, setLevelIndex] = useState(-1);
+  const [levels, setLevels] = useState<Array<{ id: string; name: string; par: number; start: [number, number, number]; hole: [number, number, number]; slopes: Slope[]; movingObstacles: MovingObstacleData[] }>>([]);
   const [par, setPar] = useState(3);
   const [levelName, setLevelName] = useState('');
   const [, setHole] = useState<[number, number, number]>([0, 0.01, -10]);
+  const [slopes, setSlopes] = useState<Slope[]>([]);
+  const [movingObstacles, setMovingObstacles] = useState<MovingObstacleData[]>([]);
+  const obstacleRefs = useRef<React.RefObject<MovingObstacleRef>[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(true);
   const [aiming, setAiming] = useState(false);
@@ -223,6 +230,9 @@ function GameContent({ user }: { user: User }) {
   const bounceBurstTriggerRef = useRef<((pos: THREE.Vector3) => void) | null>(null);
   const goalBurstTriggerRef = useRef<((pos: THREE.Vector3) => void) | null>(null);
   const playerControlsRef = useRef<PlayerControlsHandle | null>(null); // internal ref to access aim data
+  const [lastShotPath, setLastShotPath] = useState<PathEntry[]>([]);
+  const [isReplaying, setIsReplaying] = useState(false);
+  const pathRecorder = useRef<PathEntry[]>([]);
 
   // Minimal WebAudio beeps for feedback
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -257,25 +267,26 @@ function GameContent({ user }: { user: User }) {
       files.map(async (f) => {
         const res = await fetch(`/levels/${f}`);
         const cfg = await res.json();
+        const levelSlopes = (cfg.slopes || []).map((s: any) => {
+          const v1 = new THREE.Vector3(...s.vertices[0]);
+          const v2 = new THREE.Vector3(...s.vertices[1]);
+          const v3 = new THREE.Vector3(...s.vertices[2]);
+          const normal = new THREE.Plane().setFromCoplanarPoints(v1, v2, v3).normal;
+          return { vertices: [v1, v2, v3], normal };
+        });
+        const levelObstacles = (cfg.movingObstacles || []).map((o: any, i: number) => ({ ...o, id: `obs-${i}` }));
         return {
           id: f.replace('.json', ''),
           name: cfg.name as string,
           par: cfg.par as number,
           start: cfg.start as [number, number, number],
           hole: cfg.hole as [number, number, number],
+          slopes: levelSlopes,
+          movingObstacles: levelObstacles,
         };
       })
     ).then((arr) => {
       setLevels(arr);
-      if (arr.length > 0) {
-        const l = arr[0];
-        setPar(l.par);
-        setLevelName(l.name);
-        setHole(l.hole);
-        holeVecRef.current.set(l.hole[0], l.hole[1], l.hole[2]);
-        // set ball before first frame so camera rig initializes at correct position
-  ballPosition.current.set(l.start[0], l.start[1], l.start[2]);
-      }
     });
   }, []);
 
@@ -285,6 +296,7 @@ function GameContent({ user }: { user: User }) {
     ballVelocity.current.copy(velocity);
     setStrokes(prevStrokes => prevStrokes + 1);
     setGameState('shot');
+    pathRecorder.current = [];
     if (showHelp) setShowHelp(false);
     // Audio cue
     playBeep(880, 0.06, 'triangle', 0.06);
@@ -292,10 +304,20 @@ function GameContent({ user }: { user: User }) {
 
   const handleBallStop = () => {
     setGameState('ready');
+    setLastShotPath(pathRecorder.current);
     playBeep(330, 0.05, 'sine', 0.04);
   };
 
-  // Guard to ensure we only post the score once per hole
+  const handleReplay = () => {
+    if (lastShotPath.length > 0 && !isReplaying) {
+      setIsReplaying(true);
+    }
+  };
+
+  const handleReplayFinish = () => {
+    setIsReplaying(false);
+  };
+
   const postedRef = useRef(false);
 
   const handleGoal = () => {
@@ -316,29 +338,44 @@ function GameContent({ user }: { user: User }) {
 
     // Advance to next level after a short pause
     setTimeout(() => {
-      const nextIndex = (levelIndex + 1) % Math.max(1, levels.length);
-      setLevelIndex(nextIndex);
-      const next = levels[nextIndex];
-      if (next) {
-        setPar(next.par);
-        setLevelName(next.name);
-        setHole(next.hole);
-        holeVecRef.current.set(next.hole[0], next.hole[1], next.hole[2]);
-        ballVelocity.current.set(0, 0, 0);
-        ballPosition.current.set(next.start[0], next.start[1], next.start[2]);
-        // setBallRenderPosition([next.start[0], next.start[1], next.start[2]]);
-        setStrokes(0);
-        setGameState('ready');
-        setNotice(null);
-        postedRef.current = false; // ready for next hole's submission
-      }
-    }, 1800);
+      // Instead of advancing, go back to level select
+      setAppState('level-select');
+      setNotice(null);
+    }, 2500);
   };
+
+  const handleSelectLevel = (index: number) => {
+    const level = levels[index];
+    if (!level) return;
+    setLevelIndex(index);
+    setPar(level.par);
+    setLevelName(level.name);
+    setHole(level.hole);
+    setSlopes(level.slopes);
+    setMovingObstacles(level.movingObstacles);
+
+    // Create refs for the obstacles
+    obstacleRefs.current = level.movingObstacles.map(() => React.createRef());
+
+    holeVecRef.current.set(level.hole[0], level.hole[1], level.hole[2]);
+    ballPosition.current.set(level.start[0], level.start[1], level.start[2]);
+    ballVelocity.current.set(0, 0, 0);
+    setStrokes(0);
+    setGameState('ready');
+    setNotice(null);
+    postedRef.current = false;
+    setAppState('playing');
+    setLastShotPath([]);
+  };
+
+  if (appState === 'level-select') {
+    return <LevelSelector levels={levels} onSelectLevel={handleSelectLevel} />;
+  }
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: 'skyblue' }}>
-  <HUD strokes={strokes} par={par} power={aimPower} />
-      <div style={{ position: 'absolute', top: 20, right: 20, maxWidth: 280, pointerEvents: 'none' }}>
+  <HUD strokes={strokes} par={par} power={aimPower} onReplay={handleReplay} canReplay={lastShotPath.length > 0 && !isReplaying} />
+      <div style={{ position: 'absolute', top: 20, right: 20, maxWidth: 280 }}>
         {levels[levelIndex]?.id && (
           <div style={{ pointerEvents: 'auto' }}>
             <Leaderboard levelId={levels[levelIndex].id} />
@@ -351,13 +388,14 @@ function GameContent({ user }: { user: User }) {
         </div>
       )}
       {showHelp && (
-        <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', color: 'white', padding: '10px 12px', borderRadius: 10, pointerEvents: 'none' }}>
-          Click and drag from the ball to aim; release to shoot.
+        <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', color: 'white', padding: '10px 12px', borderRadius: 10, pointerEvents: 'none', textAlign: 'center' }}>
+          Click and drag to aim. <br /> Press 'K' for keyboard controls (Arrows, +/-, Space).
         </div>
       )}
   <Canvas
     style={{ cursor: aiming ? 'crosshair' : 'default' }}
     camera={{ position: [0, 15, 20], fov: 50 }}
+    dpr={window.devicePixelRatio} // Start with native DPR
   >
   {/* Lights */}
         <ambientLight intensity={0.6} />
@@ -365,16 +403,23 @@ function GameContent({ user }: { user: User }) {
         <directionalLight position={[10, 10, 5]} intensity={1} />
 
   {/* Smooth camera follow (lightweight) */}
+  <DynamicResolutionHandler />
   <CameraRig target={ballPosition.current} velocity={ballVelocity.current} offset={new THREE.Vector3(0, 10, 18)} damping={0.06} />
 
   {/* Course */}
-  <Level hole={levels[levelIndex]?.hole ?? [0, 0.01, -10]} />
+  <Level hole={levels[levelIndex]?.hole ?? [0, 0.01, -10]} slopes={slopes} />
+  {movingObstacles.map((obstacleData, i) => (
+    <MovingObstacle key={obstacleData.id} data={obstacleData} obstacleRef={obstacleRefs.current[i]} />
+  ))}
   <HolePulse centerRef={holeVecRef} triggerRef={holePulseTriggerRef} />
   {/* Particles: bounce near ball, goal at hole */}
   <ParticlesBurst color="#ffffff" count={14} triggerRef={bounceBurstTriggerRef} />
   <ParticlesBurst color="#ffeb3b" count={18} triggerRef={goalBurstTriggerRef} />
-  <Ball positionRef={ballPosition} velocityRef={ballVelocity} />
-        {gameState === 'ready' && (
+
+  {!isReplaying && <Ball positionRef={ballPosition} velocityRef={ballVelocity} />}
+  {isReplaying && <ReplayBall path={lastShotPath} onReplayFinish={handleReplayFinish} ballPositionRef={ballPosition} />}
+
+        {gameState === 'ready' && !isReplaying && (
           <>
             <PlayerControls
               ref={playerControlsRef}
@@ -399,6 +444,9 @@ function GameContent({ user }: { user: User }) {
           onGoal={handleGoal}
           holePosition={new THREE.Vector3(...(levels[levelIndex]?.hole ?? [0, 0.01, -10]))}
           onBounce={(pos) => { playBeep(440, 0.03, 'square', 0.04); bounceBurstTriggerRef.current?.(pos); }}
+          slopes={slopes}
+          obstacles={movingObstacles.map((data, i) => ({ ref: obstacleRefs.current[i], data }))}
+          pathRecorder={pathRecorder}
         />
       </Canvas>
     </div>

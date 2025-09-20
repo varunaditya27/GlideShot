@@ -1,7 +1,9 @@
 import React from 'react';
 import { Plane, Box } from '@react-three/drei';
+import * as THREE from 'three';
+import { Slope } from '@/lib/physics';
 
-export default function Level({ hole = [0, 0.01, -10] as [number, number, number] }) {
+export default function Level({ hole = [0, 0.01, -10] as [number, number, number], slopes = [] as Slope[] }) {
   const groundSize = [20, 30]; // width, height
   const wallThickness = 0.5;
   const wallHeight = 2;
@@ -12,6 +14,17 @@ export default function Level({ hole = [0, 0.01, -10] as [number, number, number
       <Plane args={[groundSize[0], groundSize[1]]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <meshStandardMaterial color="#8bc34a" roughness={0.8} metalness={0.05} />
       </Plane>
+
+      {/* Slopes */}
+      {slopes.map((slope, index) => {
+        const geometry = new THREE.BufferGeometry().setFromPoints(slope.vertices);
+        geometry.computeVertexNormals();
+        return (
+          <mesh key={index} geometry={geometry}>
+            <meshStandardMaterial color="#66bb6a" roughness={0.8} metalness={0.05} />
+          </mesh>
+        );
+      })}
 
       {/* Walls */}
       {/* Back Wall */}

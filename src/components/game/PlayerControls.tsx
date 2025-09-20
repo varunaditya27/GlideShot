@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useRef, useImperativeHandle, forwardRef, useEffect } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Intersection } from 'three';
@@ -22,6 +22,7 @@ export interface PlayerControlsHandle {
 const PlayerControls = forwardRef<PlayerControlsHandle, PlayerControlsProps>(function PlayerControls({ ballPosition, onShoot, onAimStart, onAimEnd, onAimChange }, ref) {
   const [aim, setAim] = useState({ direction: new THREE.Vector3(0, 0, -1), power: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isKeyboardAiming, setIsKeyboardAiming] = useState(false);
   const startDragPoint = useRef<THREE.Vector3 | null>(null);
 
   const planeRef = useRef<THREE.Mesh>(null!);
@@ -76,8 +77,70 @@ const PlayerControls = forwardRef<PlayerControlsHandle, PlayerControlsProps>(fun
   useImperativeHandle(ref, () => ({
     getDirection: () => aim.direction,
     getPower: () => aim.power,
-    isAiming: () => isDragging,
-  }), [aim.direction, aim.power, isDragging]);
+    isAiming: () => isDragging || isKeyboardAiming,
+  }), [aim.direction, aim.power, isDragging, isKeyboardAiming]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        const newIsKeyboardAiming = !isKeyboardAiming;
+        setIsKeyboardAiming(newIsKeyboardAiming);
+        if (newIsKeyboardAiming) {
+          onAimStart?.();
+        } else {
+          onAimEnd?.();
+        }
+      }
+
+      if (!isKeyboardAiming) return;
+
+      let newDirection = aim.direction.clone();
+      let newPower = aim.power;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          newDirection.applyAxisAngle(new THREE.Vector3(1,0,0), -0.05);
+          break;
+        case 'ArrowDown':
+          newDirection.applyAxisAngle(new THREE.Vector3(1,0,0), 0.05);
+          break;
+        case 'ArrowLeft':
+          newDirection.applyAxisAngle(new THREE.Vector3(0,1,0), 0.05);
+          break;
+        case 'ArrowRight':
+          newDirection.applyAxisAngle(new THREE.Vector3(0,1,0), -0.05);
+          break;
+        case '+':
+        case '=':
+          newPower = Math.min(aim.power + 0.25, 5);
+          break;
+        case '-':
+          newPower = Math.max(aim.power - 0.25, 0);
+          break;
+        case ' ': // Space bar
+          e.preventDefault();
+          if (aim.power > 0) {
+            const shotVelocity = aim.direction.clone().multiplyScalar(aim.power * 2);
+            onShoot(shotVelocity);
+            setIsKeyboardAiming(false);
+            onAimEnd?.();
+            setAim({ direction: aim.direction, power: 0 });
+            onAimChange?.(0);
+          }
+          break;
+      }
+
+      newDirection.y = 0; // Keep it on the XZ plane
+      newDirection.normalize();
+
+      setAim({ direction: newDirection, power: newPower });
+      onAimChange?.(newPower);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isKeyboardAiming, aim, onAimStart, onAimEnd, onShoot, onAimChange]);
 
   return (
     <group>

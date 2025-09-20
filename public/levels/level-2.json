@@ -1,9 +1,18 @@
 {
-  "name": "Gentle Challenge",
-  "description": "Slightly narrower course with corner bounces.",
-  "model": "",
-  "start": [0, 0.2, 10],
-  "hole": [2, 0.01, -9],
-  "par": 3,
-  "obstacles": []
+  "name": "The Crusher",
+  "par": 4,
+  "start": [0, 0.2, 12],
+  "hole": [0, 0.01, -12],
+  "movingObstacles": [
+    {
+      "shape": "box", "size": [8, 2, 1],
+      "path": [ [-6, 1, 0], [6, 1, 0] ],
+      "speed": 4, "mode": "ping-pong"
+    },
+    {
+      "shape": "box", "size": [2, 2, 2],
+      "path": [ [0, 1, -6], [0, 4, -6] ],
+      "speed": 1, "mode": "ping-pong"
+    }
+  ]
 }
